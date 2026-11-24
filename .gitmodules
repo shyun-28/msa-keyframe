@@ -1,0 +1,8 @@
+[submodule "third_party/opt-key"]
+	path = third_party/opt-key
+	url = https://github.com/LTU-RAI/opt-key.git
+	ignore = dirty
+[submodule "third_party/OverlapTransformer"]
+	path = third_party/OverlapTransformer
+	url = https://github.com/haomo-ai/OverlapTransformer.git
+	ignore = dirty

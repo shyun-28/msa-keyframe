@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSA Keyframe Sampling</title>
+<meta name="description" content="A Minimal Subset Approach for Informed Keyframe Sampling in Large-Scale SLAM — 공간지능특론 프로젝트 페이지">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1b3557; --navy-2:#2b5a8a; --navy-soft:#dbe5f1;
+    --orange:#c0601c; --orange-soft:#fbe3d2;
+    --gray:#a8b3c4; --ink:#1d2430; --ink-2:#4f5b6c; --line:#dde3ea;
+    --bg:#ffffff; --bg-2:#f5f7fa; --card:#ffffff;
+    --radius:12px; --side:220px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth; scroll-padding-top:24px}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans KR",system-ui,-apple-system,sans-serif; line-height:1.7; font-size:16px}
+  img{max-width:100%; display:block}
+  a{color:var(--navy-2)}
+  code,pre{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid; grid-template-columns:var(--side) minmax(0,1fr); max-width:1200px; margin:0 auto}
+  nav.side{position:sticky; top:0; height:100vh; padding:40px 16px 24px 24px; border-right:1px solid var(--line)}
+  nav.side .brand{font-weight:700; color:var(--navy); font-size:15px; margin-bottom:20px; line-height:1.4}
+  nav.side ol{list-style:none; margin:0; padding:0}
+  nav.side a{display:block; padding:6px 10px; margin:2px 0; border-left:3px solid transparent;
+    text-decoration:none; color:var(--ink-2); font-size:14px; border-radius:0 6px 6px 0}
+  nav.side a span{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--gray); margin-right:8px}
+  nav.side a:hover{background:var(--bg-2)}
+  nav.side a.active{border-left-color:var(--navy); background:var(--navy-soft); color:var(--navy); font-weight:700}
+  nav.side a.active span{color:var(--navy-2)}
+  main{padding:48px 48px 80px; min-width:0}
+
+  /* ---------- hero ---------- */
+  header.hero{text-align:center; padding:12px 0 40px; border-bottom:1px solid var(--line)}
+  .venue{display:inline-block; font-size:13px; letter-spacing:.06em; color:var(--orange); font-weight:700; margin-bottom:10px}
+  h1{font-size:clamp(26px,3.4vw,38px); line-height:1.3; color:var(--navy); margin:0 auto 18px; max-width:820px}
+  .authors{font-size:17px; margin:0}
+  .affil{color:var(--ink-2); font-size:14px; margin:2px 0 22px}
+  .btns{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:9px 20px; border-radius:999px;
+    background:var(--navy); color:#fff; text-decoration:none; font-weight:500; font-size:15px; transition:background .15s}
+  .btn:hover{background:var(--navy-2)}
+  .btn svg{width:16px; height:16px}
+  .btn.todo{opacity:.55}
+  .note-src{font-size:12.5px; color:var(--ink-2); margin-top:18px}
+
+  /* ---------- sections ---------- */
+  section{padding:56px 0 8px}
+  .eyebrow{font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--orange); font-weight:500; letter-spacing:.05em}
+  h2{font-size:26px; color:var(--navy); margin:4px 0 16px; padding-left:14px; border-left:5px solid var(--navy); line-height:1.3}
+  h3{font-size:18px; color:var(--navy); margin:28px 0 10px}
+  p{margin:0 0 14px}
+  .lead{font-size:17px; color:var(--ink)}
+  .muted{color:var(--ink-2)}
+  .small{font-size:13.5px}
+  .tldr{background:var(--bg-2); border-radius:var(--radius); padding:18px 22px; margin:0 0 24px; border:1px solid var(--line)}
+  .tldr b{color:var(--navy)}
+
+  .grid3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px}
+  .grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px}
+  .pillar .num{font-family:"JetBrains Mono",monospace; font-size:28px; font-weight:500; color:var(--navy-2); line-height:1}
+  .pillar h4{margin:10px 0 6px; font-size:17px; color:var(--navy)}
+  .pillar p{font-size:14.5px; color:var(--ink-2); margin:0}
+
+  /* pipeline */
+  .pipeline{display:grid; grid-template-columns:1fr 28px 1fr 28px 1fr; align-items:stretch; gap:0; margin:8px 0 6px}
+  .stage{border-radius:var(--radius); padding:18px; border:1px solid #b9c9dd; background:var(--navy-soft); display:flex; flex-direction:column}
+  .stage.mid{background:var(--orange-soft); border-color:#e6b994}
+  .stage .tag{font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--navy-2)}
+  .stage.mid .tag{color:var(--orange)}
+  .stage h4{margin:4px 0 10px; font-size:18px; color:var(--navy)}
+  .stage ol{margin:0; padding-left:0; list-style:none; font-size:14.5px}
+  .stage li{padding:6px 0; border-top:1px dashed rgba(27,53,87,.18)}
+  .stage li:first-child{border-top:0}
+  .stage li .mod{display:block; font-size:13px; color:var(--ink-2)}
+  .stage .swap{margin-top:auto; padding-top:14px}
+  .pill{display:inline-block; font-size:12px; font-weight:700; padding:3px 12px; border-radius:999px; border:1.5px solid var(--navy); color:var(--navy); background:#fff}
+  .pill.fixed{border-color:var(--orange); color:var(--orange)}
+  .arrow{display:flex; align-items:center; justify-content:center; color:var(--navy)}
+  .arrow svg{width:22px; height:22px}
+
+  figure{margin:0}
+  figcaption{font-size:13.5px; color:var(--ink-2); margin-top:8px}
+  .fig2 .card{padding:14px}
+  .fig2 h4{margin:0 0 8px; font-size:15px; color:var(--navy)}
+
+  /* demo */
+  .video-ph{aspect-ratio:16/9; border-radius:var(--radius); background:var(--navy); color:#cfd9e6;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:16px}
+  .video-ph svg{width:48px; height:48px; opacity:.85}
+  .bars .metric{margin-bottom:16px}
+  .bars .metric-h{display:flex; justify-content:space-between; font-weight:700; color:var(--navy); font-size:14.5px; margin-bottom:6px}
+  .bars .metric-h small{font-weight:400; color:var(--ink-2)}
+  .bar-row{display:grid; grid-template-columns:78px minmax(0,1fr); align-items:center; gap:10px; font-size:13.5px; margin:4px 0}
+  .bar-track{position:relative; height:20px}
+  .bar{height:100%; border-radius:3px; background:var(--gray); width:0; transition:width .9s cubic-bezier(.2,.7,.2,1)}
+  .bar.msa{background:var(--navy)}
+  .bar-val{position:absolute; top:50%; transform:translateY(-50%); font-weight:700; font-size:13px; white-space:nowrap; padding-left:8px; color:var(--ink)}
+  .legend-note{font-size:12.5px; color:var(--ink-2)}
+
+  table{width:100%; border-collapse:collapse; font-size:14.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  thead th{background:var(--navy-soft); color:var(--navy); font-weight:700; border-bottom:1px solid #b9c9dd}
+  td.tbd{color:var(--gray); font-family:"JetBrains Mono",monospace}
+  tr.hl td{background:#fbf3ec}
+  .table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius)}
+  .table-wrap table th:first-child,.table-wrap table td:first-child{padding-left:16px}
+
+  /* environments */
+  .env .media{position:relative; aspect-ratio:4/3; background:#0d1520; border-radius:8px; overflow:hidden; margin-bottom:12px}
+  .env .media img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity .35s}
+  .env .media img.bev{object-fit:contain; opacity:0}
+  .env .media.show-bev img.bev{opacity:1}
+  .env .media.show-bev img.cam{opacity:0}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:2px; margin-bottom:12px; background:var(--bg-2)}
+  .seg button{border:0; background:transparent; font:inherit; font-size:12.5px; padding:3px 12px; border-radius:999px; cursor:pointer; color:var(--ink-2)}
+  .seg button[aria-pressed="true"]{background:var(--navy); color:#fff}
+  .env .kicker{font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--orange)}
+  .env h4{margin:2px 0 6px; font-size:19px; color:var(--navy)}
+  .env ul{margin:0; padding-left:18px; font-size:14px; color:var(--ink-2)}
+  .badge{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:6px; background:var(--navy-soft); color:var(--navy); margin-left:6px; vertical-align:2px}
+  .badge.new{background:var(--orange-soft); color:var(--orange)}
+
+  /* try it */
+  .drop{border:2px dashed #9fb4cd; border-radius:var(--radius); background:#f6f9fc; padding:26px; display:flex; align-items:center; gap:18px; transition:background .15s,border-color .15s}
+  .drop.over{background:var(--navy-soft); border-color:var(--navy)}
+  .drop svg{width:40px; height:40px; flex:none; color:var(--navy-2)}
+  .drop .txt{flex:1; min-width:0}
+  .drop .txt b{display:block; font-size:16px; color:var(--navy)}
+  .drop .txt span{font-size:13.5px; color:var(--ink-2)}
+  .btn-sq{border:0; background:var(--navy); color:#fff; font:inherit; font-weight:500; font-size:14px; padding:9px 16px; border-radius:8px; cursor:pointer}
+  .btn-sq:hover{background:var(--navy-2)}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px}
+  .chips .lbl{font-weight:700; font-size:14px; color:var(--navy); margin-right:4px}
+  .chip{border:1.5px solid var(--navy); background:#fff; color:var(--navy); border-radius:999px; padding:4px 14px; font:inherit; font-size:13.5px; cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--navy); color:#fff}
+  .status{margin-top:14px; font-size:14px; padding:12px 14px; border-radius:8px; background:var(--bg-2); border:1px solid var(--line); display:none}
+  .status.on{display:block}
+  .soon{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:6px; background:var(--orange-soft); color:var(--orange); vertical-align:4px; margin-left:8px}
+
+  .yt{position:relative; aspect-ratio:16/9; border-radius:var(--radius); overflow:hidden; background:#000}
+  .yt iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+
+  pre.bib{background:#0f1b2b; color:#dce6f2; padding:18px 20px; border-radius:var(--radius); overflow-x:auto; font-size:13px; line-height:1.6; margin:0}
+  .copy{float:right; margin:-4px 0 8px 8px; border:1px solid var(--line); background:#fff; border-radius:6px; font:inherit; font-size:12.5px; padding:3px 10px; cursor:pointer; color:var(--ink-2)}
+  ol.refs{font-size:13px; color:var(--ink-2); padding-left:28px}
+  ol.refs li{margin:3px 0}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-2); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap}
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px){
+    .layout{display:block}
+    nav.side{position:sticky; top:0; z-index:10; height:auto; padding:8px 16px; border-right:0; border-bottom:1px solid var(--line); background:rgba(255,255,255,.96); backdrop-filter:blur(6px)}
+    nav.side .brand{display:none}
+    nav.side ol{display:flex; gap:4px; overflow-x:auto; scrollbar-width:none}
+    nav.side ol::-webkit-scrollbar{display:none}
+    nav.side a{white-space:nowrap; border-left:0; border-bottom:3px solid transparent; border-radius:6px 6px 0 0; padding:6px 10px}
+    nav.side a.active{border-bottom-color:var(--navy)}
+    nav.side a span{display:none}
+    html{scroll-padding-top:64px}
+    main{padding:28px 16px 60px}
+    .grid3,.grid2{grid-template-columns:1fr}
+    .pipeline{grid-template-columns:1fr}
+    .arrow{height:30px; transform:rotate(90deg)}
+    .drop{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="side" aria-label="섹션">
+  <div class="brand">MSA Keyframe<br><span class="muted small" style="font-weight:400">공간지능특론 프로젝트</span></div>
+  <ol>
+    <li><a href="#overview"><span>01</span>Overview</a></li>
+    <li><a href="#method"><span>02</span>Method</a></li>
+    <li><a href="#demo"><span>03</span>Code Demo</a></li>
+    <li><a href="#environments"><span>04</span>Environments</a></li>
+    <li><a href="#comparison"><span>05</span>Comparison</a></li>
+    <li><a href="#video"><span>06</span>Video</a></li>
+    <li><a href="#try"><span>07</span>Try It Yourself</a></li>
+    <li><a href="#code"><span>08</span>Code</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="venue">IEEE RA-L 2026 · 논문 리뷰 &amp; 재현 프로젝트</div>
+  <h1>A Minimal Subset Approach for Informed Keyframe Sampling in Large-Scale SLAM</h1>
+  <p class="authors">정석환 · 윤승희</p>
+  <p class="affil">공간지능특론 · Spatial AI and Robotics Lab.</p>
+  <div class="btns">
+    <!-- TODO: 논문 링크(DOI 또는 arXiv)로 교체 -->
+    <a class="btn todo" href="#" title="링크 준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Paper</a>
+    <!-- TODO: GitHub 저장소 링크로 교체 -->
+    <a class="btn todo" href="#code" title="저장소 준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+    <a class="btn" href="#video"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Video</a>
+  </div>
+  <p class="note-src">원 논문: N. Stathoulopoulos, C. Kanellakis, G. Nikolakopoulos, IEEE RA-L, vol. 11, no. 1, pp. 738–745, 2026. 이 페이지는 수업 프로젝트로 만든 리뷰·재현 페이지입니다.</p>
+</header>
+
+<!-- 01 OVERVIEW -->
+<section id="overview">
+  <div class="eyebrow">01 OVERVIEW</div>
+  <h2>Overview</h2>
+  <div class="tldr">
+    <b>TL;DR</b> — 대규모 LiDAR SLAM에서 모든 프레임을 키프레임으로 저장하면 메모리와 루프 클로저 계산량이 함께 커집니다.
+    <b>MSA (Minimal Subset Approach)</b>는 슬라이딩 윈도우 안에서 중복도와 정보량을 따져 <b>꼭 필요한 최소 부분집합만</b> 키프레임으로 남깁니다.
+    논문에서는 정확도를 거의 유지하면서 메모리와 처리 시간을 크게 줄였습니다.
+  </div>
+  <p class="lead">이 프로젝트는 논문을 세 가지 축으로 검증합니다.</p>
+  <div class="grid3">
+    <div class="card pillar">
+      <div class="num">01</div>
+      <h4>Code Demo</h4>
+      <p>SLAM의 Front-end와 Back-end를 모듈로 분리하고, MSA를 적용했을 때와 적용하지 않았을 때를 비교합니다.</p>
+    </div>
+    <div class="card pillar">
+      <div class="num">02</div>
+      <h4>Multi-Environment</h4>
+      <p>도심(KITTI)뿐 아니라 논문에서 다루지 않은 야지(DiTer)와 해양(SeePerSea) LiDAR 데이터에도 적용합니다.</p>
+    </div>
+    <div class="card pillar">
+      <div class="num">03</div>
+      <h4>Comparison</h4>
+      <p>Related Work의 키프레임 샘플링 방법(Fixed Interval, Spaciousness, Entropy)과 같은 조건에서 비교합니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 02 METHOD -->
+<section id="method">
+  <div class="eyebrow">02 METHOD</div>
+  <h2>Front-end / Back-end Separation</h2>
+  <p>전체 파이프라인을 세 부분으로 나눕니다. <b>MSA는 고정</b>하고 앞뒤의 Front-end와 Back-end를 <b>바꿔 끼울 수 있게</b> 만들어,
+    MSA가 특정 오도메트리나 디스크립터에만 맞춰진 방법이 아닌지 확인합니다.</p>
+
+  <div class="pipeline" role="list">
+    <div class="stage" role="listitem">
+      <div class="tag">FRONT-END</div>
+      <h4>Odometry</h4>
+      <ol>
+        <li>1. LiDAR scan 입력</li>
+        <li>2. Odometry 추정<span class="mod">KISS-ICP [2]</span></li>
+      </ol>
+      <div class="swap"><span class="pill">Swappable</span></div>
+    </div>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h11V5l7 7-7 7v-5H4z"/></svg></div>
+    <div class="stage mid" role="listitem">
+      <div class="tag">KEYFRAME SAMPLING</div>
+      <h4>MSA [1]</h4>
+      <ol>
+        <li>3. Sliding window 구성</li>
+        <li>4. Redundancy · Information 점수 계산</li>
+        <li>5. 최소 부분집합을 keyframe으로 선택</li>
+      </ol>
+      <div class="swap"><span class="pill fixed">Fixed</span></div>
+    </div>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h11V5l7 7-7 7v-5H4z"/></svg></div>
+    <div class="stage" role="listitem">
+      <div class="tag">BACK-END</div>
+      <h4>Loop Closure &amp; PGO</h4>
+      <ol>
+        <li>6. Place Recognition<span class="mod">OverlapTransformer [3]</span></li>
+        <li>7. Loop Verification<span class="mod">small_gicp [4]</span></li>
+        <li>8. Pose Graph Optimization<span class="mod">iSAM2 [5]</span></li>
+      </ol>
+      <div class="swap"><span class="pill">Swappable</span></div>
+    </div>
+  </div>
+
+  <h3>w/o MSA vs. w/ MSA — 개념도</h3>
+  <div class="grid2 fig2">
+    <figure class="card">
+      <h4>w/o MSA — 모든 프레임 저장</h4>
+      <img src="assets/fig2_wo_msa.png" alt="MSA 미적용: 모든 키프레임과 많은 루프 클로저 후보" loading="lazy">
+    </figure>
+    <figure class="card">
+      <h4>w/ MSA — 최소 부분집합만 저장</h4>
+      <img src="assets/fig2_w_msa.png" alt="MSA 적용: 중복 키프레임 제거, 핵심 루프 클로저 유지" loading="lazy">
+    </figure>
+  </div>
+  <figcaption>논문 Fig. 2 [1]를 두 그림으로 나눠 다시 그린 개념도입니다. 키프레임 번호와 개수는 원리를 보여주기 위한 예시이며 실제 데이터와 관계없습니다.
+    MSA는 비슷한 위치의 중복 키프레임을 걸러내 불필요한 루프 클로저 후보를 줄이지만, 지도 보정에 필요한 핵심 연결은 유지합니다.</figcaption>
+</section>
+
+<!-- 03 CODE DEMO -->
+<section id="demo">
+  <div class="eyebrow">03 CODE DEMO</div>
+  <h2>Code Demo</h2>
+  <div class="grid2">
+    <div>
+      <!-- TODO: 시연 GIF/영상이 준비되면 아래 div를 <img src="assets/demo.gif"> 또는 <video>로 교체 -->
+      <div class="video-ph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg>
+        <div><b style="color:#fff">시연 영상 (GIF)</b><br><span class="small">w/o MSA와 w/ MSA를 나란히 실행한 결과를 준비 중입니다</span></div>
+      </div>
+    </div>
+    <div class="bars" id="bars">
+      <div class="metric-h" style="margin-bottom:12px"><span>w/o MSA vs. w/ MSA</span><small>논문 보고값 [1] · Newer College (Park)</small></div>
+      <!-- bars rendered by script -->
+    </div>
+  </div>
+
+  <h3>재현 결과</h3>
+  <p class="muted small">같은 항목을 저희 파이프라인으로 다시 측정해 채울 예정입니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Metric</th><th>All frames (논문)</th><th>MSA (논문)</th><th>All frames (재현)</th><th>MSA (재현)</th></tr></thead>
+      <tbody>
+        <tr><td>Memory ↓</td><td>65.8 GB</td><td>40.7 GB</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+        <tr><td>Time ↓</td><td>6,742 s</td><td>1,925 s</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+        <tr><td>F1-max ↑</td><td>99.8 %</td><td>96.9 %</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+        <tr><td>t. ATE 개선율 ↑</td><td>93.9 %</td><td>92.9 %</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 04 ENVIRONMENTS -->
+<section id="environments">
+  <div class="eyebrow">04 ENVIRONMENTS</div>
+  <h2>Multi-Environment Evaluation</h2>
+  <p>먼저 도심 환경의 KITTI로 논문 결과를 재현해 파이프라인이 제대로 동작하는지 확인합니다. 그다음 논문에서 다루지 않은 환경으로 넓혀,
+    구조물이 적은 야지나 특징이 거의 없는 수면에서도 MSA가 <b>튜닝 없이</b> 잘 동작하는지 확인합니다.</p>
+  <div class="grid3">
+    <article class="card env">
+      <div class="media" data-media><img class="cam" src="assets/kitti_cam.png" alt="KITTI 카메라 이미지 — 도심 도로" loading="lazy"><img class="bev" src="assets/kitti_bev.png" alt="KITTI LiDAR BEV" loading="lazy"></div>
+      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
+      <div class="kicker">URBAN · 도심</div>
+      <h4>KITTI [6]<span class="badge">재현</span></h4>
+      <ul><li>차량 · Velodyne HDL-64E</li><li>논문 결과 재현</li></ul>
+    </article>
+    <article class="card env">
+      <div class="media" data-media><img class="cam" src="assets/diter_cam.png" alt="DiTer 카메라 이미지 — 비포장 숲길" loading="lazy"><img class="bev" src="assets/diter_bev.png" alt="DiTer LiDAR BEV" loading="lazy"></div>
+      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
+      <div class="kicker">OFF-ROAD · 야지</div>
+      <h4>DiTer [7]<span class="badge new">확장</span></h4>
+      <ul><li>사족보행 로봇 · LiDAR</li><li>비정형 지형</li></ul>
+    </article>
+    <article class="card env">
+      <div class="media" data-media><img class="cam" src="assets/seepersea_cam.png" alt="SeePerSea 카메라 이미지 — 호수 위 카약" loading="lazy"><img class="bev" src="assets/seepersea_bev.png" alt="SeePerSea LiDAR BEV" loading="lazy"></div>
+      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
+      <div class="kicker">MARITIME · 해양</div>
+      <h4>SeePerSea [8]<span class="badge new">확장</span></h4>
+      <ul><li>자율 수상선 · LiDAR + RGB</li><li>수면 환경</li></ul>
+    </article>
+  </div>
+</section>
+
+<!-- 05 COMPARISON -->
+<section id="comparison">
+  <div class="eyebrow">05 COMPARISON</div>
+  <h2>Related Keyframe Sampling Methods</h2>
+  <p>논문 Related Work에 나온 LiDAR 기반 방법 세 가지를 같은 Front-end · Back-end 조건에서 MSA와 비교합니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>방식</th><th>출처</th></tr></thead>
+      <tbody>
+        <tr><td>Fixed Interval</td><td>1 · 2 · 3 m마다 키프레임</td><td>LIO-SAM [9], DiSCo-SLAM [10], LAMP 2.0 [11]</td></tr>
+        <tr><td>Spaciousness-based</td><td>공간 넓이에 따라 간격 조절</td><td>Chen et al. [12], Kim et al. [13]</td></tr>
+        <tr><td>Entropy-based</td><td>정보량이 큰 프레임 선택</td><td>Zeng et al. [14]</td></tr>
+        <tr class="hl"><td><b>MSA</b></td><td>중복도 · 정보량 기반 최소 부분집합 선택</td><td>Stathoulopoulos et al. [1]</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <figure style="margin-top:22px">
+    <img src="assets/keyframe_distribution.png" alt="좁은 통로, 넓은 공간, 재방문 구간에서 각 방법의 키프레임 배치 개념도" loading="lazy" style="border:1px solid var(--line); border-radius:8px">
+    <figcaption>좁은 통로 · 넓은 공간 · 재방문 구간에서 각 방법이 키프레임을 어디에 두는지 나타낸 개념도입니다. 실제 분포는 실험으로 확인할 예정입니다.</figcaption>
+  </figure>
+</section>
+
+<!-- 06 VIDEO -->
+<section id="video">
+  <div class="eyebrow">06 VIDEO</div>
+  <h2>Video</h2>
+  <p class="muted">공간지능특론 프로젝트 중간 발표</p>
+  <div class="yt">
+    <iframe src="https://www.youtube-nocookie.com/embed/yc6Atd3W2_o" title="공간지능 특론 프로젝트 중간 발표 - 정석환 윤승희" loading="lazy"
+      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  </div>
+</section>
+
+<!-- 07 TRY IT -->
+<section id="try">
+  <div class="eyebrow">07 TRY IT YOURSELF</div>
+  <h2>Try It Yourself<span class="soon">COMING SOON</span></h2>
+  <p>다양한 환경의 LiDAR 데이터셋을 올리고 비교할 방법을 고르면, MSA와 다른 키프레임 샘플링 방법을 같은 조건에서 비교할 수 있게 만들 예정입니다.</p>
+  <div class="drop" id="drop">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5H7z"/><path d="M12 11v6m-2.5-3.5L12 11l2.5 2.5"/></svg>
+    <div class="txt"><b>LiDAR 데이터셋을 여기에 끌어다 놓으세요</b><span>.bin · .pcd · rosbag 지원 예정</span></div>
+    <label class="btn-sq">파일 선택<input type="file" id="file" accept=".bin,.pcd,.bag,.db3,.mcap" hidden></label>
+  </div>
+  <div class="chips" role="group" aria-label="비교할 방법">
+    <span class="lbl">비교할 방법</span>
+    <button class="chip" aria-pressed="true">MSA</button>
+    <button class="chip" aria-pressed="true">Fixed Interval</button>
+    <button class="chip" aria-pressed="false">Entropy</button>
+    <button class="chip" aria-pressed="false">Spaciousness</button>
+  </div>
+  <div class="status" id="status" role="status"></div>
+</section>
+
+<!-- 08 CODE -->
+<section id="code">
+  <div class="eyebrow">08 CODE</div>
+  <h2>Code &amp; Citation</h2>
+  <p>코드는 정리가 끝나면 GitHub에 공개합니다. <!-- TODO: 저장소 링크 --></p>
+  <h3>원 논문 인용</h3>
+  <button class="copy" id="copy">복사</button>
+  <pre class="bib" id="bib">@article{stathoulopoulos2026msa,
+  title   = {A Minimal Subset Approach for Informed Keyframe Sampling in Large-Scale SLAM},
+  author  = {Stathoulopoulos, Nikolaos and Kanellakis, Christoforos and Nikolakopoulos, George},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {11},
+  number  = {1},
+  pages   = {738--745},
+  year    = {2026}
+}</pre>
+
+  <h3>References</h3>
+  <ol class="refs">
+    <li>N. Stathoulopoulos, C. Kanellakis, G. Nikolakopoulos, “A Minimal Subset Approach for Informed Keyframe Sampling in Large-Scale SLAM,” IEEE RA-L, vol. 11, no. 1, pp. 738–745, 2026.</li>
+    <li>I. Vizzo et al., “KISS-ICP,” IEEE RA-L, 2023.</li>
+    <li>J. Ma et al., “OverlapTransformer,” IEEE RA-L, 2022.</li>
+    <li>K. Koide, “small_gicp,” JOSS, 2024.</li>
+    <li>M. Kaess et al., “iSAM2,” ICRA, 2011.</li>
+    <li>A. Geiger et al., “Are we ready for Autonomous Driving? The KITTI Vision Benchmark Suite,” CVPR, 2012.</li>
+    <li>S. Jeong, H. Kim, Y. Cho, “DiTer: Diverse Terrain and Multi-Modal Dataset for Field Robot Navigation in Outdoor Environments,” IEEE Sensors Letters, 2024.</li>
+    <li>M. Jeong et al., “SeePerSea: Multimodal Perception Dataset of In-Water Objects for Autonomous Surface Vehicles,” IEEE T-FR, 2025.</li>
+    <li>T. Shan et al., “LIO-SAM,” IROS, 2020.</li>
+    <li>Y. Huang et al., “DiSCo-SLAM,” IEEE RA-L, 2022.</li>
+    <li>Y. Chang et al., “LAMP 2.0,” IEEE RA-L, 2022.</li>
+    <li>K. Chen et al., “Direct LiDAR Odometry,” IEEE RA-L, 2022.</li>
+    <li>B. Kim et al., “Adaptive Keyframe Generation based LiDAR Inertial Odometry …,” ICRA, 2023.</li>
+    <li>Q. Zeng et al., “Entropy-based Keyframe Established and Accelerated Fast LiDAR Odometry …,” ITOEC, 2023.</li>
+  </ol>
+
+  <footer>
+    <span>정석환 · 윤승희 — 공간지능특론, Spatial AI and Robotics Lab.</span>
+    <span>데이터셋 이미지 출처: KITTI, DiTer, SeePerSea</span>
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script>
+// ---- bar chart (paper-reported values) ----
+const METRICS = [
+  {name:"Memory", dir:"↓", all:65.8, msa:40.7, fmt:v=>v.toFixed(1)+" GB", max:65.8},
+  {name:"Time", dir:"↓", all:6742, msa:1925, fmt:v=>v.toLocaleString("en-US")+" s", max:6742},
+  {name:"F1-max", dir:"↑", all:99.8, msa:96.9, fmt:v=>v.toFixed(1)+" %", max:100},
+  {name:"t. ATE 개선율", dir:"↑", all:93.9, msa:92.9, fmt:v=>v.toFixed(1)+" %", max:100},
+];
+const bars = document.getElementById("bars");
+METRICS.forEach(m=>{
+  const el = document.createElement("div");
+  el.className = "metric";
+  const row = (lbl, v, cls) => `<div class="bar-row"><span>${lbl}</span><div class="bar-track">
+      <div class="bar ${cls}" data-w="${(v/m.max*78).toFixed(1)}"></div>
+      <span class="bar-val" data-left="${(v/m.max*78).toFixed(1)}">${m.fmt(v)}</span></div></div>`;
+  el.innerHTML = `<div class="metric-h"><span>${m.name} ${m.dir}</span></div>` + row("All frames", m.all, "") + row("MSA", m.msa, "msa");
+  bars.appendChild(el);
+});
+bars.querySelectorAll(".bar-val").forEach(s=>s.style.left = s.dataset.left + "%");
+const animate = () => bars.querySelectorAll(".bar").forEach(b=>b.style.width = b.dataset.w + "%");
+if ("IntersectionObserver" in window){
+  const io = new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting)){ animate(); io.disconnect(); } }, {threshold:.3});
+  io.observe(bars);
+} else animate();
+
+// ---- camera / BEV toggle ----
+document.querySelectorAll(".env").forEach(card=>{
+  const media = card.querySelector("[data-media]");
+  const btns = card.querySelectorAll(".seg button");
+  btns.forEach(b=>b.addEventListener("click", ()=>{
+    btns.forEach(x=>x.setAttribute("aria-pressed", x===b));
+    media.classList.toggle("show-bev", b.dataset.v==="bev");
+  }));
+});
+
+// ---- try it (UI only for now) ----
+const drop = document.getElementById("drop"), status = document.getElementById("status");
+const chips = [...document.querySelectorAll(".chip")];
+chips.forEach(c=>c.addEventListener("click", ()=>c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")!=="true")));
+const handle = files => {
+  if (!files || !files.length) return;
+  const f = files[0];
+  const sel = chips.filter(c=>c.getAttribute("aria-pressed")==="true").map(c=>c.textContent);
+  status.innerHTML = `<b>${f.name.replace(/[<>&]/g,"")}</b> (${(f.size/1048576).toFixed(1)} MB) · 비교 방법: ${sel.join(", ") || "선택 없음"}<br>
+    <span class="muted">브라우저 실행 기능은 준비 중입니다. 파일은 업로드되지 않고 이 브라우저 안에만 머뭅니다.</span>`;
+  status.classList.add("on");
+};
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.remove("over");}));
+drop.addEventListener("drop", e=>handle(e.dataTransfer.files));
+document.getElementById("file").addEventListener("change", e=>handle(e.target.files));
+
+// ---- copy bibtex ----
+document.getElementById("copy").addEventListener("click", async e=>{
+  try { await navigator.clipboard.writeText(document.getElementById("bib").textContent); e.target.textContent = "복사됨"; }
+  catch { e.target.textContent = "복사 실패"; }
+  setTimeout(()=>e.target.textContent = "복사", 1500);
+});
+
+// ---- scroll spy ----
+const links = [...document.querySelectorAll("nav.side a")];
+const secs = links.map(a=>document.querySelector(a.getAttribute("href")));
+const spy = () => {
+  const y = window.scrollY + window.innerHeight*0.3;
+  let i = 0; secs.forEach((s,k)=>{ if (s.offsetTop <= y) i = k; });
+  if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) i = secs.length-1;
+  links.forEach((a,k)=>a.classList.toggle("active", k===i));
+  if (window.matchMedia("(max-width:900px)").matches) links[i].scrollIntoView({block:"nearest", inline:"center"});
+};
+let ticking=false; window.addEventListener("scroll", ()=>{ if(!ticking){ requestAnimationFrame(()=>{spy(); ticking=false;}); ticking=true; } });
+spy();
+</script>
+</body>
+</html>

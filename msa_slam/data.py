@@ -74,26 +74,44 @@ def read_pcd(path: str) -> np.ndarray:
     return pts[np.isfinite(pts).all(axis=1)]
 
 
+def find_sidecars(folder: str):
+    """(pose_file, calib_file) for a scan folder, or None for each that is missing.
+    poses.txt / calib.txt inside the folder win; otherwise the KITTI odometry layout
+    dataset/sequences/<seq>/velodyne -> dataset/poses/<seq>.txt, sequences/<seq>/calib.txt."""
+    folder = os.path.normpath(folder)
+    pose, calib = os.path.join(folder, "poses.txt"), os.path.join(folder, "calib.txt")
+    seq_dir = os.path.dirname(folder)
+    if os.path.basename(folder) == "velodyne" and os.path.basename(os.path.dirname(seq_dir)) == "sequences":
+        seq, root = os.path.basename(seq_dir), os.path.dirname(os.path.dirname(seq_dir))
+        if not os.path.exists(pose):
+            pose = os.path.join(root, "poses", f"{seq}.txt")
+        if not os.path.exists(calib):
+            calib = os.path.join(seq_dir, "calib.txt")
+    return (pose if os.path.exists(pose) else None), (calib if os.path.exists(calib) else None)
+
+
 class FolderScans:
     """A folder of scans in file-name order: KITTI-style .bin (float32 x,y,z,i) or .pcd.
     Optional GT: poses.txt (KITTI format, 12 numbers per line, one line per scan).
     If calib.txt with a `Tr:` line is present, poses are converted from the KITTI
-    camera frame to the LiDAR frame, as KISS-ICP does."""
+    camera frame to the LiDAR frame, as KISS-ICP does. pose_file / calib_file override
+    the files inside the folder (see `find_sidecars` for the KITTI layout)."""
 
-    def __init__(self, folder: str, name: str = None):
+    def __init__(self, folder: str, name: str = None, pose_file: str = None, calib_file: str = None):
         self.name = name or os.path.basename(os.path.normpath(folder))
         self.scan_files = sorted(os.path.join(folder, f) for f in os.listdir(folder)
                                  if f.lower().endswith(SCAN_EXTS))
         if not self.scan_files:
             raise ValueError("no .bin or .pcd scans found")
         self.gt_poses = None
-        pose_file = os.path.join(folder, "poses.txt")
+        pose_file = pose_file or os.path.join(folder, "poses.txt")
+        calib_file = calib_file or os.path.join(folder, "calib.txt")
         if os.path.exists(pose_file):
             p = np.loadtxt(pose_file, ndmin=2)
             if p.shape[1] == 12 and len(p) >= len(self.scan_files):
                 P = np.tile(np.eye(4), (len(p), 1, 1))
                 P[:, :3, :4] = p.reshape(-1, 3, 4)
-                Tr = self._read_tr(os.path.join(folder, "calib.txt"))
+                Tr = self._read_tr(calib_file)
                 if Tr is not None:
                     P = np.linalg.inv(Tr) @ P @ Tr
                 self.gt_poses = P[:len(self.scan_files)]

@@ -2,13 +2,14 @@
 
     .venv/bin/python server.py            # then open http://localhost:8000
 
-Serves index.html and assets/, accepts LiDAR scans uploaded from the page,
-runs the same pipeline as run.py (KISS-ICP -> sampling -> OverlapTransformer /
+Serves index.html and assets/, accepts LiDAR scans uploaded from the page or
+reads a scan folder on this PC directly (no upload, no size cap), runs the same pipeline as run.py (KISS-ICP -> sampling -> OverlapTransformer /
 small_gicp / iSAM2) and returns metrics, trajectories, keyframes and loops.
 Binds to 127.0.0.1 only. Jobs run one at a time.
 """
 
 import argparse
+import hashlib
 import json
 import mimetypes
 import os
@@ -26,7 +27,7 @@ import numpy as np
 import yaml
 
 from msa_slam import ROOT
-from msa_slam.data import SCAN_EXTS, FolderScans, KittiOdometry
+from msa_slam.data import SCAN_EXTS, FolderScans, find_sidecars
 from msa_slam.descriptors import make_descriptor
 from msa_slam.frontend import make_frontend
 from msa_slam.metrics import umeyama_se3
@@ -35,14 +36,66 @@ from msa_slam.pipeline import run_frontend, run_method
 CFG = yaml.safe_load(open(os.path.join(ROOT, "configs", "kitti00.yaml")))
 UPLOAD_DIR = os.path.join(ROOT, "results", "uploads")
 DEMO_DIR = os.path.join(ROOT, "results", "demo")
+LOCAL_CACHE_DIR = os.path.join(ROOT, "results", "local_cache")
+BROWSE_START = "/HDD" if os.path.isdir("/HDD") else os.path.expanduser("~")
 ALLOWED_METHODS = {"all", "msa", "fixed_1", "fixed_2", "fixed_3", "entropy", "spaciousness"}
 UPLOAD_NAMES = re.compile(r"^[\w.\-]+\.(bin|pcd)$|^(poses|calib)\.txt$", re.I)
 MAX_FRAMES = 6000
 
-SAMPLES = {}
-if os.path.isdir(os.path.join(CFG["dataset"]["root"], "sequences", "00", "velodyne")):
-    SAMPLES["kitti00"] = {"name": "KITTI 00 (도심, 서버 보관)", "frames": 4541,
-                          "cache": os.path.join(ROOT, "results", "kitti_00_4541", "stage1_cache.npz")}
+# KITTI sequences on this PC, offered as one-click shortcuts in the folder browser
+KITTI_SEQ_DIR = os.path.join(CFG["dataset"]["root"], "sequences")
+KITTI00_CACHE = os.path.join(ROOT, "results", "kitti_00_4541", "stage1_cache.npz")  # from run.py
+
+
+def kitti_presets():
+    if not os.path.isdir(KITTI_SEQ_DIR):
+        return []
+    out = []
+    for seq in sorted(os.listdir(KITTI_SEQ_DIR)):
+        vel = os.path.join(KITTI_SEQ_DIR, seq, "velodyne")
+        if os.path.isdir(vel):
+            out.append({"name": f"KITTI {seq}", "path": os.path.realpath(vel)})
+    return out
+
+
+
+def scan_folder_info(path):
+    """Scans and GT files found in a folder (no recursion)."""
+    n, size = 0, 0
+    with os.scandir(path) as it:
+        for e in it:
+            if e.name.lower().endswith(SCAN_EXTS) and e.is_file():
+                n += 1
+                size += e.stat().st_size
+    pose, calib = find_sidecars(path) if n else (None, None)
+    return {"scans": n, "mb": round(size / 1048576, 1), "poses": pose, "calib": calib}
+
+
+def browse(path):
+    path = os.path.realpath(path or BROWSE_START)
+    if not os.path.isdir(path):
+        raise ValueError("폴더가 아닙니다")
+    dirs = []
+    with os.scandir(path) as it:
+        for e in sorted(it, key=lambda e: e.name):
+            if e.name.startswith(".") or not e.is_dir():
+                continue
+            try:  # cheap peek: does it hold scans directly?
+                with os.scandir(e.path) as sub:
+                    has = any(x.name.lower().endswith(SCAN_EXTS) for x in sub)
+            except OSError:
+                continue
+            dirs.append({"name": e.name, "scans": has})
+            if len(dirs) >= 500:
+                break
+    parent = os.path.dirname(path)
+    return {"path": path, "parent": parent if parent != path else None, "dirs": dirs, **scan_folder_info(path)}
+
+
+def local_cache_path(path, n_scans):
+    key = hashlib.sha1(f"{path}|{n_scans}|{os.stat(path).st_mtime_ns}".encode()).hexdigest()[:16]
+    return os.path.join(LOCAL_CACHE_DIR, key, "stage1_cache.npz")
+
 
 JOBS = {}
 QUEUE = queue.Queue()
@@ -62,9 +115,13 @@ def _xy(a):
 
 def run_job(job):
     job.update(state="running", stage="데이터 확인", progress=0.0)
-    if job["source"] == "sample":
-        ds = KittiOdometry(CFG["dataset"]["root"], CFG["dataset"]["sequence"])
-        extra = [SAMPLES["kitti00"]["cache"]]
+    if job["source"] == "local":
+        pose, calib = find_sidecars(job["folder"])
+        ds = FolderScans(job["folder"], pose_file=pose, calib_file=calib)
+        extra = [local_cache_path(job["folder"], len(ds))]  # stage 1 kept per folder for re-runs
+        k00 = os.path.realpath(os.path.join(CFG["dataset"]["root"], "sequences", "00", "velodyne"))
+        if job["folder"] == k00:  # stage 1 already computed by run.py for KITTI 00
+            extra.append(KITTI00_CACHE)
     else:
         ds = FolderScans(job["folder"], name="upload")
         extra = []
@@ -79,15 +136,15 @@ def run_job(job):
             job["progress"] = (stage_idx + i / total) / steps
         return f
 
-    cache = os.path.join(out, "stage1_cache.npz")
-    have_cache = any(os.path.exists(p) for p in [cache] + extra)
+    cache = extra[0] if job["source"] == "local" else os.path.join(out, "stage1_cache.npz")
+    have_cache = any(os.path.exists(p) and len(np.load(p, mmap_mode="r")["odom"]) >= n for p in [cache] + extra)
     fe = None if have_cache else make_frontend(CFG["frontend"])
     desc = None if have_cache else descriptor()
     stage1 = run_frontend(ds, fe, desc, n, CFG["backend"].get("fine_voxel", 0.5), cache,
                           progress=prog(0, "1단계 · KISS-ICP + OverlapTransformer"), extra_caches=extra)
 
     gt = ds.gt_poses[:n] if ds.gt_poses is not None else None
-    res = {"frames": n, "has_gt": gt is not None, "methods": []}
+    res = {"frames": n, "total_frames": len(ds), "has_gt": gt is not None, "methods": []}
     T_align = None
     if gt is not None:
         res["gt"] = _xy(gt[:, :3, 3])
@@ -109,7 +166,9 @@ def run_job(job):
         T = umeyama_se3(odom, gt[:, :3, 3])
         odom = (T[:3, :3] @ odom.T).T + T[:3, 3]
     res["odom"] = _xy(odom)
-    res["stage1_s"] = {"frontend": float(stage1["t_frontend"]), "descriptor": float(stage1["t_descriptor"])}
+    # a reused cache carries the timings of the run that built it, not of this one
+    res["stage1_s"] = None if have_cache else {"frontend": float(stage1["t_frontend"]),
+                                               "descriptor": float(stage1["t_descriptor"])}
     job.update(state="done", stage="완료", progress=1.0, result=res)
 
 
@@ -143,8 +202,12 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(url.query)
         if url.path == "/api/health":
             return self._send(200, {"ok": True, "busy": any(j["state"] == "running" for j in JOBS.values()),
-                                    "samples": [{"id": k, "name": v["name"], "frames": v["frames"]}
-                                                for k, v in SAMPLES.items()]})
+                                    "presets": kitti_presets()})
+        if url.path == "/api/browse":
+            try:
+                return self._send(200, browse(q.get("path", [""])[0]))
+            except (OSError, ValueError) as e:
+                return self._send(400, {"error": f"열 수 없습니다: {e}"})
         if url.path == "/api/job":
             job = JOBS.get(q.get("id", [""])[0])
             if not job:
@@ -187,10 +250,13 @@ class Handler(BaseHTTPRequestHandler):
             methods = ["all"] + [m for m in req.get("methods", []) if m in ALLOWED_METHODS and m != "all"]
             job = {"id": uuid.uuid4().hex, "state": "queued", "stage": "대기 중", "progress": 0.0,
                    "methods": methods, "max_frames": int(req.get("max_frames") or 0), "created": time.time()}
-            if req.get("sample"):
-                if req["sample"] not in SAMPLES:
-                    return self._send(400, {"error": "unknown sample"})
-                job["source"] = "sample"
+            if req.get("path"):
+                folder = os.path.realpath(str(req["path"]))
+                if not os.path.isdir(folder):
+                    return self._send(400, {"error": "폴더를 찾을 수 없습니다"})
+                if not scan_folder_info(folder)["scans"]:
+                    return self._send(400, {"error": "이 폴더에 .bin 또는 .pcd 스캔이 없습니다"})
+                job.update(source="local", folder=folder)
             else:
                 session = str(req.get("session", ""))
                 folder = os.path.join(UPLOAD_DIR, session)
@@ -215,7 +281,7 @@ def main():
         shutil.rmtree(DEMO_DIR, ignore_errors=True)
     threading.Thread(target=worker, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
-    print(f"MSA demo server: http://localhost:{a.port}  (samples: {', '.join(SAMPLES) or 'none'})")
+    print(f"MSA demo server: http://localhost:{a.port}  (KITTI shortcuts: {len(kitti_presets())})")
     srv.serve_forever()
 
 

@@ -153,13 +153,28 @@
   .srv.off{background:var(--orange-soft); border-color:#efc4a3; color:#7a3d12}
   .srv code{font-family:"JetBrains Mono",monospace; font-size:12.5px; background:rgba(255,255,255,.7); padding:1px 6px; border-radius:4px}
   .try-src{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px}
+  .local{border:1.5px solid var(--line); border-radius:var(--radius); padding:14px; background:#f6f9fc}
+  .local-path{display:flex; gap:8px}
+  .presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
+  .presets:empty{display:none}
+  .presets button{border:1.5px solid var(--navy); background:#fff; color:var(--navy); font:inherit; font-size:13px; font-weight:600; padding:4px 11px; border-radius:999px; cursor:pointer}
+  .presets button[aria-pressed=true]{background:var(--navy); color:#fff}
+  .local-path input{flex:1; min-width:0; font:13px "JetBrains Mono",monospace; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff}
+  .local-list{margin-top:10px; max-height:260px; overflow:auto; background:#fff; border:1px solid var(--line); border-radius:8px}
+  .local-list button{display:flex; width:100%; justify-content:space-between; gap:10px; border:0; border-bottom:1px solid var(--line); background:none; font:inherit; font-size:13.5px; padding:7px 12px; text-align:left; cursor:pointer; color:var(--ink)}
+  .local-list button:last-child{border-bottom:0}
+  .local-list button:hover{background:var(--navy-soft)}
+  .local-list .tag{font-size:12px; color:#2d5b35; background:#eef6ef; border-radius:999px; padding:1px 8px; white-space:nowrap}
+  .local-info{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:13.5px; color:var(--ink-2)}
+  .local-info b{color:var(--navy)}
+  .local-info select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
   .src-opt{display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:var(--radius); padding:12px 14px; cursor:pointer; flex-wrap:wrap}
   .src-opt:has(input:checked){border-color:var(--navy); background:#f6f9fc}
   .src-opt span{flex:1; min-width:160px}
   .src-opt b{display:block; color:var(--navy); font-size:15px}
   .src-opt small{color:var(--ink-2); font-size:12.5px}
   .src-opt select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
-  .drop.disabled{opacity:.45; pointer-events:none}
+  .drop[hidden]{display:none}
   .drop-btns{display:flex; gap:8px; flex-wrap:wrap}
   .btn-sq.ghost{background:#fff; color:var(--navy); border:1.5px solid var(--navy)}
   .btn-sq.ghost:hover{background:var(--navy-soft)}
@@ -294,16 +309,26 @@
   <div class="srv" id="srv" role="status">데모 서버 확인 중…</div>
 
   <div class="try-src" role="radiogroup" aria-label="데이터">
-    <label class="src-opt"><input type="radio" name="src" value="sample" checked>
-      <span><b>샘플 · KITTI 00</b><small>서버에 있는 도심 데이터 · 바로 실행</small></span>
-      <select id="sample-frames" aria-label="프레임 수"><option value="500">앞 500 프레임</option><option value="1000">앞 1,000 프레임</option><option value="2000" selected>앞 2,000 프레임</option><option value="4541">전체 4,541 프레임</option></select>
+    <label class="src-opt"><input type="radio" name="src" value="local" checked>
+      <span><b>이 PC의 데이터</b><small>KITTI 바로가기 또는 스캔 폴더 · 업로드 없이 서버가 바로 읽음 · 크기 제한 없음</small></span>
     </label>
     <label class="src-opt"><input type="radio" name="src" value="upload">
-      <span><b>내 LiDAR 데이터</b><small>스캔 폴더 업로드 · 1단계 계산 포함 (약 0.1 s/프레임)</small></span>
+      <span><b>파일 업로드</b><small>브라우저로 파일을 보냄 · 1.7 GB까지</small></span>
     </label>
   </div>
 
-  <div class="drop" id="drop">
+  <div class="local" id="local" hidden>
+    <div class="presets" id="presets"></div>
+    <div class="local-path">
+      <input id="local-path" type="text" spellcheck="false" aria-label="스캔 폴더 경로" placeholder="/HDD/KITTI/odometry/dataset/sequences/08/velodyne">
+      <button class="btn-sq ghost" id="local-up" type="button" title="상위 폴더">↑ 위로</button>
+      <button class="btn-sq" id="local-go" type="button">열기</button>
+    </div>
+    <div class="local-list" id="local-list"></div>
+    <div class="local-info" id="local-info"></div>
+  </div>
+
+  <div class="drop" id="drop" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5H7z"/><path d="M12 11v6m-2.5-3.5L12 11l2.5 2.5"/></svg>
     <div class="txt"><b>스캔 폴더나 파일을 여기에 끌어다 놓으세요</b>
       <span>.bin(KITTI 형식) · .pcd, 파일 이름 순서가 시간 순서 · 정확도(ATE · F1)를 보려면 poses.txt(KITTI 형식, 선택)와 calib.txt(선택)도 함께 · 1.7 GB(KITTI 약 900개)가 넘으면 앞부분만 올립니다</span></div>
@@ -463,18 +488,53 @@ document.querySelectorAll(".env").forEach(card=>{
 
   const say = (html, on=true) => { status.innerHTML = html; status.classList.toggle("on", on); };
   const src = () => document.querySelector("input[name=src]:checked").value;
+  let local = null, presets = [];  // last folder opened in the browser; KITTI shortcuts from the server
   const refresh = () => {
-    drop.classList.toggle("disabled", src() !== "upload");
-    const ready = src() === "sample" || files.some(f=>isScan(f.name));
+    drop.hidden = src() !== "upload";
+    $("local").hidden = src() !== "local";
+    if (src() === "local" && !local && online) browse(presets[0]?.path || "");
+    const ready = src() === "local" ? !!(local && local.scans) : files.some(f=>isScan(f.name));
     runBtn.disabled = !online || busy || !ready || !chips.some(c=>c.getAttribute("aria-pressed")==="true");
   };
   document.querySelectorAll("input[name=src]").forEach(r=>r.addEventListener("change", refresh));
   chips.forEach(c=>c.addEventListener("click", ()=>{ c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")!=="true"); refresh(); }));
 
+  // local folder browser (server reads the folder directly; nothing is uploaded)
+  const browse = async path => {
+    try {
+      const r = await fetch(`/api/browse?path=${encodeURIComponent(path)}`), d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      local = d; $("local-path").value = d.path;
+      $("presets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.path === d.path));
+      $("local-list").innerHTML = d.dirs.length ? d.dirs.map(x=>`<button type="button" data-name="${esc(x.name)}"><span>📁 ${esc(x.name)}</span>${x.scans ? '<span class="tag">스캔 있음</span>' : ""}</button>`).join("")
+        : "";
+      $("local-list").hidden = !d.dirs.length;
+      $("local-list").querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>browse(d.path.replace(/\/$/, "") + "/" + b.dataset.name)));
+      $("local-up").disabled = !d.parent;
+      const opts = [500, 1000, 2000].filter(n=>n < d.scans).map(n=>`<option value="${n}">앞 ${n.toLocaleString()} 프레임</option>`).join("");
+      $("local-info").innerHTML = d.scans
+        ? `<b>스캔 ${d.scans.toLocaleString()}개 · ${(d.mb/1024).toFixed(2)} GB</b>` +
+          `<span>${d.poses ? "정답 포즈: " + esc(d.poses.split("/").slice(-2).join("/")) : "정답 포즈 없음 (F1 · ATE 생략)"}</span>` +
+          `<select id="local-frames" aria-label="프레임 수">${opts}<option value="0">전체 ${d.scans.toLocaleString()} 프레임</option></select>`
+        : "이 폴더에는 .bin / .pcd 스캔이 없습니다. 스캔이 든 폴더로 들어가세요.";
+      const sel = $("local-frames");  // default: 2,000 frames when longer (keeps a first run short)
+      if (sel) sel.value = d.scans > 2000 ? "2000" : "0";
+    } catch (e) {
+      $("local-info").textContent = `열 수 없습니다 · ${e.message}`;
+      local = null;
+    }
+    refresh();
+  };
+  $("local-go").addEventListener("click", ()=>browse($("local-path").value.trim()));
+  $("local-path").addEventListener("keydown", e=>{ if (e.key === "Enter") browse($("local-path").value.trim()); });
+  $("local-up").addEventListener("click", ()=>local && local.parent && browse(local.parent));
+
   // server check
   const http = location.protocol.startsWith("http");
   (http ? fetch("/api/health").then(r=>r.json()) : Promise.reject())
-    .then(h => { online = true; srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
+    .then(h => { online = true; presets = h.presets || [];
+      $("presets").innerHTML = presets.map(p=>`<button type="button" data-path="${esc(p.path)}" aria-pressed="false">${esc(p.name)}</button>`).join("");
+      $("presets").querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>browse(b.dataset.path))); srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
     .catch(() => { srv.className = "srv off";
       srv.innerHTML = "실행하려면 로컬 데모 서버에서 이 페이지를 여세요: <code>.venv/bin/python server.py</code> 실행 후 <code>http://localhost:8000</code>"; })
     .finally(refresh);
@@ -559,7 +619,7 @@ document.querySelectorAll(".env").forEach(card=>{
     const methods = chips.filter(c=>c.getAttribute("aria-pressed")==="true").map(c=>c.dataset.m);
     try {
       const body = {methods};
-      if (src() === "sample") { body.sample = "kitti00"; body.max_frames = +$("sample-frames").value; }
+      if (src() === "local") { body.path = local.path; body.max_frames = +($("local-frames")?.value || 0); }
       else body.session = await upload();
       const r = await fetch("/api/run", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
       const j = await r.json();
@@ -582,10 +642,13 @@ document.querySelectorAll(".env").forEach(card=>{
   function render(res) {
     const ms = res.methods, gt = res.has_gt;
     ms.forEach(m=>{ if (m.metrics.loops == null) m.metrics.loops = m.loops.length; });  // no GT -> no loop metrics
-    const cols = [["방법", m=>`<b>${LABEL[m.method]||m.method}</b>`], ["Keyframes", m=>m.metrics.keyframes.toLocaleString()],
-      ["Memory", m=>{ const v=m.metrics.memory_raw_scans_MB; return v>=1000 ? (v/1000).toFixed(2)+" GB" : v.toFixed(0)+" MB"; }],
-      ["Back-end", m=>f1(m.metrics.time_backend_s)+" s"], ["샘플링", m=>f1(m.metrics.time_sampling_s)+" s"], ["Loops", m=>m.metrics.loops ?? "–"]];
-    if (gt) cols.push(["F1-max", m=>f1(m.metrics.f1_max, 3)], ["ATE", m=>f1(m.metrics.ate_opt_m, 2)+" m"]);
+    // only the metrics the MSA paper reports: Memory, Time, F1-max, t. ATE improvement
+    const pct = v => v == null ? "–" : v.toFixed(1) + " %";
+    const cols = [["방법", m=>`<b>${LABEL[m.method]||m.method}</b>`],
+      ["Memory ↓", m=>{ const v=m.metrics.memory_raw_scans_MB; return v>=1000 ? (v/1000).toFixed(2)+" GB" : v.toFixed(0)+" MB"; }],
+      ["Time ↓", m=>f1(m.metrics.time_total_s)+" s"]];
+    if (gt) cols.push(["F1-max ↑", m=>pct(m.metrics.f1_max == null ? null : 100*m.metrics.f1_max)],
+                      ["t. ATE 개선율 ↑", m=>pct(m.metrics.ate_improvement_pct)]);
     $("try-table").innerHTML = `<thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>` +
       ms.map(m=>`<tr${m.method==="msa"?' class="hl"':""}>${cols.map(c=>`<td>${c[1](m)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     const plots = $("try-plots"); plots.innerHTML = "";
@@ -600,8 +663,10 @@ document.querySelectorAll(".env").forEach(card=>{
       draw(cv, m, res.gt, box);
     });
     const s1 = res.stage1_s;
-    $("try-note").textContent = `${res.frames.toLocaleString()} 프레임 · 1단계(공통) KISS-ICP ${s1.frontend.toFixed(1)} s, OverlapTransformer ${s1.descriptor.toFixed(1)} s` +
-      (gt ? " · 궤적은 GT에 SE(3) 정렬, 회색 띠 = GT" : " · poses.txt가 없어 F1 · ATE는 생략했고 궤적은 정렬하지 않았습니다") + " · 점 = 키프레임, 빨간 선 = 루프 클로저";
+    $("try-note").textContent = `${res.frames.toLocaleString()} 프레임 · ` +
+      (s1 ? `1단계(공통) KISS-ICP ${s1.frontend.toFixed(1)} s, OverlapTransformer ${s1.descriptor.toFixed(1)} s` : "1단계(공통)는 이 폴더에서 이전에 계산한 결과를 다시 사용") +
+      " · Time = 키프레임 샘플링 + Back-end, Memory = 키프레임 원본 스캔 크기 합, t. ATE 개선율 = KISS-ICP만 쓴 궤적 대비" +
+      (gt ? " · 궤적은 GT에 SE(3) 정렬, 회색 띠 = GT" : " · poses.txt가 없어 F1-max · t. ATE 개선율은 생략했고 궤적은 정렬하지 않았습니다") + " · 점 = 키프레임, 빨간 원 = 루프 클로저가 생긴 위치";
     $("try-result").hidden = false;
     $("try-result").scrollIntoView({behavior:"smooth", block:"start"});
   }
@@ -614,13 +679,17 @@ document.querySelectorAll(".env").forEach(card=>{
     const P = p => [ox + (p[0]-b.x0)*s, W - (oy + (p[1]-b.y0)*s)];
     const line = (pts, color, w) => { c.strokeStyle = color; c.lineWidth = w; c.lineJoin = "round"; c.beginPath();
       pts.forEach((p,i)=>{ const [x,y]=P(p); i ? c.lineTo(x,y) : c.moveTo(x,y); }); c.stroke(); };
-    if (gt) line(gt, "#e6e9ee", 5);
+    if (gt) line(gt, "#d3d9e1", 6);
     line(m.traj, "#1d2430", 0.8);
-    c.strokeStyle = "#d1352b"; c.lineWidth = 1;
-    m.loops.forEach(([q,k])=>{ const a=P(m.traj[q]), bb=P(m.traj[k]); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(bb[0],bb[1]); c.stroke(); });
     c.fillStyle = COLOR[m.method] || "#1b3557";
     const r = m.keyframes.length > 2000 ? 0.9 : 1.6;
     m.keyframes.forEach(k=>{ const [x,y]=P(m.traj[k]); c.beginPath(); c.arc(x,y,r,0,7); c.fill(); });
+    // loops: both ends sit at (almost) the same place, so a connecting line vanishes;
+    // mark where each loop was closed with a ring drawn on top
+    c.strokeStyle = "#d1352b"; c.lineWidth = 1.4;
+    m.loops.forEach(([q,k])=>{ const a=P(m.traj[q]), bb=P(m.traj[k]);
+      c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(bb[0],bb[1]); c.stroke();
+      c.beginPath(); c.arc(a[0], a[1], 4, 0, 7); c.stroke(); });
   }
 })();
 

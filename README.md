@@ -57,9 +57,11 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 .venv/bin/python server.py          # http://localhost:8000 (이 PC에서만 접속 가능)
 ```
 
-페이지의 Try It Yourself에서 서버에 있는 KITTI 00 샘플을 고르거나, 스캔 폴더(`.bin` KITTI 형식 또는 `.pcd`, 파일 이름 순)를 끌어다 놓고 실행합니다.
+페이지의 Try It Yourself에서 데이터를 고르는 방법은 두 가지입니다. 스캔은 `.bin`(KITTI 형식) 또는 `.pcd`이고, 파일 이름 순서를 시간 순서로 봅니다.
+- **이 PC의 데이터**: 서버가 돌고 있는 PC의 스캔 폴더를 서버가 디스크에서 바로 읽습니다(업로드 없음, 크기 제한 없음). `configs/kitti00.yaml`의 `dataset.root`에 있는 KITTI 시퀀스는 바로가기 버튼으로 나오고, 다른 폴더는 경로를 입력하거나 폴더 탐색창에서 고릅니다. KITTI 구조(`sequences/<seq>/velodyne`)면 `poses/<seq>.txt`와 `calib.txt`를 자동으로 붙이고, 1단계 결과는 `results/local_cache/`에 폴더별로 저장해 다시 실행할 때 씁니다(KITTI 00은 `run.py`가 만든 캐시를 씀).
+- **파일 업로드**: 브라우저로 스캔 폴더를 보냅니다(끌어다 놓기). 브라우저와 서버가 다른 PC일 때를 위한 방식입니다(지금 서버는 같은 PC에서만 접속을 받습니다).
 `poses.txt`(KITTI 형식, 스캔당 한 줄)를 함께 넣으면 ATE · F1-max까지 계산하고, `calib.txt`에 `Tr:`가 있으면 KITTI처럼 카메라 → LiDAR 좌표로 바꿉니다.
-한 번에 1.7 GB(KITTI 약 900개)까지만 올립니다. 이보다 많이 고르면 앞부분만 올리는데, 이 PC의 Chrome에서 업로드한 데이터가 탭 메모리에 쌓여 약 2 GB에서 페이지가 멈췄기 때문입니다. 더 긴 시퀀스는 `run.py`로 돌리세요.
+한 번에 1.7 GB(KITTI 약 900개)까지만 올립니다. 이보다 많이 고르면 앞부분만 올리는데, 이 PC의 Chrome에서 업로드한 데이터가 탭 메모리에 쌓여 약 2 GB에서 페이지가 멈췄기 때문입니다. 더 긴 시퀀스는 이 PC의 데이터로 돌리세요.
 업로드는 `results/uploads/`, 결과는 `results/demo/`에 저장됩니다(`--clean`으로 지움). 파일로 연 페이지(`file://`)에서는 실행 버튼이 꺼져 있습니다.
 
 결과: `results/<seq>_<n>/summary.md`(비교표), `trajectories.png`, 방법별 `metrics.json`, `poses_opt.txt`(KITTI 형식), `keyframes.txt`, `loops.json`.

@@ -33,12 +33,22 @@ def _prefetch(fn, n: int, ahead: int = 16) -> Iterator:
 
 
 # --- stage 1 ----------------------------------------------------------------
-def run_frontend(dataset, frontend, descriptor, n_frames: int, cloud_voxel: float, cache_path: str) -> Dict:
-    if os.path.exists(cache_path):
-        data = dict(np.load(cache_path))
-        if len(data["odom"]) == n_frames:
-            print(f"[stage 1] loaded cache {cache_path}")
-            return data
+def slice_stage1(data: Dict, n: int) -> Dict:
+    """First n frames of a longer stage-1 result. Valid because stage 1 is causal."""
+    off = data["offsets"][:n + 1]
+    out = dict(data)
+    out.update(odom=data["odom"][:n], descs=data["descs"][:n], offsets=off, clouds=data["clouds"][:off[-1]])
+    return out
+
+
+def run_frontend(dataset, frontend, descriptor, n_frames: int, cloud_voxel: float, cache_path: str,
+                 progress=None, extra_caches=()) -> Dict:
+    for path in (cache_path, *extra_caches):
+        if path and os.path.exists(path):
+            data = dict(np.load(path))
+            if len(data["odom"]) >= n_frames:
+                print(f"[stage 1] loaded cache {path}")
+                return slice_stage1(data, n_frames)
     import small_gicp
 
     odom = np.zeros((n_frames, 4, 4))
@@ -47,15 +57,23 @@ def run_frontend(dataset, frontend, descriptor, n_frames: int, cloud_voxel: floa
     t_front = t_desc = 0.0
     for i, points in enumerate(tqdm(_prefetch(dataset.scan, n_frames), total=n_frames, desc="[stage 1] KISS-ICP + OT")):
         t0 = time.perf_counter()
-        odom[i] = frontend.step(points)
+        if len(points) >= 10:
+            odom[i] = frontend.step(points)
+        else:  # (almost) empty scan, e.g. open water: hold the last pose
+            odom[i] = odom[i - 1] if i else np.eye(4)
         t1 = time.perf_counter()
-        descs[i] = descriptor(points)
+        descs[i] = descriptor(points) if len(points) else (descs[i - 1] if i else 0)
         t2 = time.perf_counter()
         t_front += t1 - t0
         t_desc += t2 - t1
-        ds = small_gicp.voxelgrid_sampling(points, cloud_voxel).points()[:, :3].astype(np.float32)
+        if len(points):
+            ds = small_gicp.voxelgrid_sampling(points, cloud_voxel).points()[:, :3].astype(np.float32)
+        else:
+            ds = np.zeros((0, 3), dtype=np.float32)
         clouds.append(ds)
         offsets.append(offsets[-1] + len(ds))
+        if progress and (i % 10 == 0 or i == n_frames - 1):
+            progress(i + 1, n_frames)
     data = {"odom": odom, "descs": descs, "clouds": np.concatenate(clouds),
             "offsets": np.asarray(offsets), "t_frontend": t_front, "t_descriptor": t_desc}
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -64,7 +82,8 @@ def run_frontend(dataset, frontend, descriptor, n_frames: int, cloud_voxel: floa
 
 
 # --- stage 2 ----------------------------------------------------------------
-def run_method(method: str, dataset, stage1: Dict, n_frames: int, cfg: dict, out_dir: str) -> Dict:
+def run_method(method: str, dataset, stage1: Dict, n_frames: int, cfg: dict, out_dir: str,
+               progress=None) -> Dict:
     sampler = make_sampler(method, cfg.get("sampling", {}))
     odom, descs = stage1["odom"], stage1["descs"]
     clouds, offsets = stage1["clouds"], stage1["offsets"]
@@ -86,6 +105,8 @@ def run_method(method: str, dataset, stage1: Dict, n_frames: int, cfg: dict, out
         t_sampling += t1 - t0
         t_backend += t2 - t1
         keyframes.extend(new)
+        if progress and (i % 20 == 0 or i == n_frames - 1):
+            progress(i + 1, n_frames)
 
         # Place-recognition PR, official protocol: every frame queries the keyframe map.
         # Evaluation only, not timed.

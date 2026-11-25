@@ -51,6 +51,16 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 
 1단계(KISS-ICP + 디스크립터)는 모든 방법이 공유하므로 `results/<seq>_<n>/stage1_cache.npz`에 한 번만 계산해 둡니다. 2단계에서 각 방법이 프레임을 순서대로 받아 온라인으로 키프레임을 고르고, 고른 프레임만 Back-end로 갑니다.
 
+### 프로젝트 페이지에서 시연 (Try It Yourself)
+
+```bash
+.venv/bin/python server.py          # http://localhost:8000 (이 PC에서만 접속 가능)
+```
+
+페이지의 Try It Yourself에서 서버에 있는 KITTI 00 샘플을 고르거나, 스캔 폴더(`.bin` KITTI 형식 또는 `.pcd`, 파일 이름 순)를 끌어다 놓고 실행합니다.
+`poses.txt`(KITTI 형식, 스캔당 한 줄)를 함께 넣으면 ATE · F1-max까지 계산하고, `calib.txt`에 `Tr:`가 있으면 KITTI처럼 카메라 → LiDAR 좌표로 바꿉니다.
+업로드는 `results/uploads/`, 결과는 `results/demo/`에 저장됩니다(`--clean`으로 지움). 파일로 연 페이지(`file://`)에서는 실행 버튼이 꺼져 있습니다.
+
 결과: `results/<seq>_<n>/summary.md`(비교표), `trajectories.png`, 방법별 `metrics.json`, `poses_opt.txt`(KITTI 형식), `keyframes.txt`, `loops.json`.
 
 지표:

@@ -108,6 +108,8 @@ class LoopClosureBackend(Backend):
         return fine, fine.num_inliers / max(src.size(), 1)
 
     def _verify(self, cand_key: int, cur_cloud: np.ndarray, cur_est: np.ndarray):
+        if len(cur_cloud) < 50 or len(self.clouds[cand_key]) < 50:
+            return None  # too few points to register reliably
         cand_est = self.isam.calculateEstimatePose3(cand_key).matrix()
         best = None
         for init in (np.linalg.inv(cand_est) @ cur_est, np.eye(4)):

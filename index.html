@@ -105,6 +105,10 @@
   .bar.msa{background:var(--navy)}
   .bar-val{position:absolute; top:50%; transform:translateY(-50%); font-weight:700; font-size:13px; white-space:nowrap; padding-left:8px; color:var(--ink)}
   .legend-note{font-size:12.5px; color:var(--ink-2)}
+  #bars{max-width:640px}
+  .demo-gif{width:100%; display:block; border:1px solid var(--line); border-radius:var(--radius); background:#fff}
+  .findings{margin:12px 0 0; padding-left:18px}
+  .findings li{margin:4px 0}
 
   table{width:100%; border-collapse:collapse; font-size:14.5px}
   th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top}
@@ -144,6 +148,35 @@
   .chip[aria-pressed="true"]{background:var(--navy); color:#fff}
   .status{margin-top:14px; font-size:14px; padding:12px 14px; border-radius:8px; background:var(--bg-2); border:1px solid var(--line); display:none}
   .status.on{display:block}
+  .srv{font-size:13.5px; padding:9px 12px; border-radius:8px; margin:4px 0 16px; background:var(--bg-2); border:1px solid var(--line); color:var(--ink-2)}
+  .srv.ok{background:#eef6ef; border-color:#bfd9c3; color:#2d5b35}
+  .srv.off{background:var(--orange-soft); border-color:#efc4a3; color:#7a3d12}
+  .srv code{font-family:"JetBrains Mono",monospace; font-size:12.5px; background:rgba(255,255,255,.7); padding:1px 6px; border-radius:4px}
+  .try-src{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px}
+  .src-opt{display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:var(--radius); padding:12px 14px; cursor:pointer; flex-wrap:wrap}
+  .src-opt:has(input:checked){border-color:var(--navy); background:#f6f9fc}
+  .src-opt span{flex:1; min-width:160px}
+  .src-opt b{display:block; color:var(--navy); font-size:15px}
+  .src-opt small{color:var(--ink-2); font-size:12.5px}
+  .src-opt select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
+  .drop.disabled{opacity:.45; pointer-events:none}
+  .drop-btns{display:flex; gap:8px; flex-wrap:wrap}
+  .btn-sq.ghost{background:#fff; color:var(--navy); border:1.5px solid var(--navy)}
+  .btn-sq.ghost:hover{background:var(--navy-soft)}
+  .files{margin-top:8px; min-height:1em}
+  .chip.fixed{background:var(--gray); border-color:var(--gray); color:#fff; cursor:default}
+  .run-row{display:flex; align-items:center; gap:16px; margin-top:16px; flex-wrap:wrap}
+  .btn-run{border:0; background:var(--orange); color:#fff; font:inherit; font-weight:700; font-size:15px; padding:10px 28px; border-radius:999px; cursor:pointer}
+  .btn-run:disabled{background:var(--gray); cursor:not-allowed}
+  .prog{flex:1; min-width:220px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink-2)}
+  .prog-bar{height:8px; background:var(--bg-2); border:1px solid var(--line); border-radius:999px; overflow:hidden}
+  #prog-fill{height:100%; width:0; background:var(--navy); transition:width .4s}
+  #try-result{margin-top:18px}
+  .try-plots{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-top:14px}
+  .try-plots figure{border:1px solid var(--line); border-radius:8px; padding:8px; background:#fff}
+  .try-plots canvas{width:100%; aspect-ratio:1/1; display:block}
+  .try-plots figcaption{margin-top:4px; font-size:12.5px; text-align:center}
+  .try-plots figcaption b{color:var(--navy)}
   .soon{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:6px; background:var(--orange-soft); color:var(--orange); vertical-align:4px; margin-left:8px}
 
   .yt{position:relative; aspect-ratio:16/9; border-radius:var(--radius); overflow:hidden; background:#000}
@@ -171,6 +204,7 @@
     .pipeline{grid-template-columns:1fr}
     .arrow{height:30px; transform:rotate(90deg)}
     .drop{flex-wrap:wrap}
+    .try-src{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -199,10 +233,8 @@
   <p class="authors">정석환 · 윤승희</p>
   <p class="affil">공간지능특론 · Spatial AI and Robotics Lab.</p>
   <div class="btns">
-    <!-- TODO: 논문 링크(DOI 또는 arXiv)로 교체 -->
-    <a class="btn todo" href="#" title="링크 준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Paper</a>
-    <!-- TODO: GitHub 저장소 링크로 교체 -->
-    <a class="btn todo" href="#code" title="저장소 준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+    <a class="btn" href="https://doi.org/10.1109/LRA.2025.3636035" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Paper</a>
+    <a class="btn" href="https://github.com/shyun-28/msa-keyframe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
     <a class="btn" href="#video"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Video</a>
   </div>
   <p class="note-src">원 논문: N. Stathoulopoulos, C. Kanellakis, G. Nikolakopoulos, IEEE RA-L, vol. 11, no. 1, pp. 738–745, 2026. 이 페이지는 수업 프로젝트로 만든 리뷰·재현 페이지입니다.</p>
@@ -297,33 +329,47 @@
 <section id="demo">
   <div class="eyebrow">03 CODE DEMO</div>
   <h2>Code Demo</h2>
-  <div class="grid2">
-    <div>
-      <!-- TODO: 시연 GIF/영상이 준비되면 아래 div를 <img src="assets/demo.gif"> 또는 <video>로 교체 -->
-      <div class="video-ph">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg>
-        <div><b style="color:#fff">시연 영상 (GIF)</b><br><span class="small">w/o MSA와 w/ MSA를 나란히 실행한 결과를 준비 중입니다</span></div>
-      </div>
-    </div>
+  <div>
+    <figure style="margin-bottom:26px">
+      <img class="demo-gif" src="assets/kitti00_demo.gif" alt="KITTI 00을 처음부터 끝까지 재생하며 w/o MSA와 w/ MSA의 키프레임과 루프 클로저가 쌓이는 모습" loading="lazy">
+      <figcaption>KITTI 00 (4,541 프레임) 재생. 점은 키프레임, 빨간 선은 검증된 루프 클로저입니다. 같은 궤적을 MSA는 약 1/5의 키프레임으로 만듭니다.</figcaption>
+    </figure>
     <div class="bars" id="bars">
-      <div class="metric-h" style="margin-bottom:12px"><span>w/o MSA vs. w/ MSA</span><small>논문 보고값 [1] · Newer College (Park)</small></div>
-      <!-- bars rendered by script -->
+      <div class="metric-h" style="margin-bottom:8px"><span>w/o MSA vs. w/ MSA</span><small id="bars-src"></small></div>
+      <div class="seg" role="group" aria-label="값 출처 전환">
+        <button aria-pressed="true" data-set="ours">재현 · KITTI 00</button><button aria-pressed="false" data-set="paper">논문 · Newer College</button>
+      </div>
+      <div id="bars-body"><!-- bars rendered by script --></div>
     </div>
   </div>
 
   <h3>재현 결과</h3>
-  <p class="muted small">같은 항목을 저희 파이프라인으로 다시 측정해 채울 예정입니다.</p>
+  <p>공식 MSA 코드 [1]를 그대로 가운데에 두고, 앞에 KISS-ICP [2], 뒤에 OverlapTransformer [3] · small_gicp [4] · iSAM2 [5]를 붙여 SLAM 전체에서 측정했습니다.
+    데이터셋이 다르므로(논문: Newer College, 재현: KITTI 00) 절대값보다 <b>All frames 대비 MSA의 변화 방향</b>을 비교합니다.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Metric</th><th>All frames (논문)</th><th>MSA (논문)</th><th>All frames (재현)</th><th>MSA (재현)</th></tr></thead>
       <tbody>
-        <tr><td>Memory ↓</td><td>65.8 GB</td><td>40.7 GB</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-        <tr><td>Time ↓</td><td>6,742 s</td><td>1,925 s</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-        <tr><td>F1-max ↑</td><td>99.8 %</td><td>96.9 %</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-        <tr><td>t. ATE 개선율 ↑</td><td>93.9 %</td><td>92.9 %</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+        <tr><td>Keyframes</td><td>–</td><td>–</td><td>4,541</td><td><b>962</b> (−79 %)</td></tr>
+        <tr><td>Memory ↓</td><td>65.8 GB</td><td>40.7 GB</td><td>8.83 GB</td><td><b>1.87 GB</b></td></tr>
+        <tr><td>Time ↓ (샘플링 + Back-end)</td><td>6,742 s</td><td>1,925 s</td><td>34.2 s</td><td>66.4 s</td></tr>
+        <tr><td>&nbsp;&nbsp;└ Back-end만</td><td>–</td><td>–</td><td>34.2 s</td><td><b>3.6 s</b></td></tr>
+        <tr><td>F1-max ↑</td><td>99.8 %</td><td>96.9 %</td><td>95.2 %</td><td>91.7 %</td></tr>
+        <tr><td>t. ATE 개선율 ↑</td><td>93.9 %</td><td>92.9 %</td><td>74.6 %</td><td>74.7 %</td></tr>
+        <tr><td>ATE (RMSE)</td><td>–</td><td>–</td><td>0.89 m</td><td>0.89 m</td></tr>
       </tbody>
     </table>
   </div>
+  <ul class="small muted findings">
+    <li><b>재현된 점</b>: 키프레임 79 %, 메모리 79 %, Back-end 시간 89 %가 줄었고, F1-max는 조금 내려가며 ATE는 그대로입니다. 논문과 같은 경향입니다.</li>
+    <li><b>재현되지 않은 점</b>: 전체 시간은 오히려 늘었습니다. 공식 MSA 구현이 순수 Python이라 윈도우마다 부분집합 512개를 계산하는 데 62.8 s가 들고,
+      저희 Back-end(OverlapTransformer + small_gicp)가 이미 빨라서 줄어든 Back-end 시간(30.6 s)보다 큽니다.</li>
+    <li>Memory는 키프레임 원본 스캔 크기 합, ATE 개선율은 KISS-ICP만 쓴 궤적(ATE 3.50 m) 대비입니다. 1단계(KISS-ICP 55.9 s, OverlapTransformer 272.7 s)는 공통이라 시간에서 뺐습니다.</li>
+  </ul>
+  <figure style="margin-top:18px">
+    <img src="assets/kitti00_traj.png" alt="KITTI 00 최적화 궤적: 왼쪽 w/o MSA 4,541 키프레임과 824 루프, 오른쪽 w/ MSA 962 키프레임과 148 루프, 아래는 재방문 교차로 확대" loading="lazy" style="border:1px solid var(--line); border-radius:8px">
+    <figcaption>최적화된 궤적(GT에 SE(3) 정렬). 아래는 재방문 교차로 확대: w/o MSA는 프레임마다 키프레임이 쌓이고 루프도 수십 개 연결되지만, MSA는 필요한 키프레임만 남겨도 같은 정확도로 지도를 보정합니다.</figcaption>
+  </figure>
 </section>
 
 <!-- 04 ENVIRONMENTS -->
@@ -375,8 +421,26 @@
   </div>
   <figure style="margin-top:22px">
     <img src="assets/keyframe_distribution.png" alt="좁은 통로, 넓은 공간, 재방문 구간에서 각 방법의 키프레임 배치 개념도" loading="lazy" style="border:1px solid var(--line); border-radius:8px">
-    <figcaption>좁은 통로 · 넓은 공간 · 재방문 구간에서 각 방법이 키프레임을 어디에 두는지 나타낸 개념도입니다. 실제 분포는 실험으로 확인할 예정입니다.</figcaption>
+    <figcaption>좁은 통로 · 넓은 공간 · 재방문 구간에서 각 방법이 키프레임을 어디에 두는지 나타낸 개념도입니다.</figcaption>
   </figure>
+
+  <h3>KITTI 00 결과</h3>
+  <p>모든 방법이 같은 Front-end · Back-end · 파라미터를 씁니다. 비교 방법들도 공식 opt-key 구현을 그대로 호출했습니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Keyframes</th><th>Memory</th><th>Back-end</th><th>샘플링</th><th>Loops</th><th>F1-max</th><th>ATE</th></tr></thead>
+      <tbody>
+        <tr><td>All frames (w/o MSA)</td><td>4,541</td><td>8.83 GB</td><td>34.2 s</td><td>0.0 s</td><td>824</td><td>0.952</td><td>0.89 m</td></tr>
+        <tr><td>Fixed Interval 1 m</td><td>2,717</td><td>5.28 GB</td><td>12.5 s</td><td>0.2 s</td><td>514</td><td>0.948</td><td>0.90 m</td></tr>
+        <tr><td>Fixed Interval 2 m</td><td>1,541</td><td>2.99 GB</td><td>5.9 s</td><td>0.2 s</td><td>282</td><td>0.934</td><td>0.88 m</td></tr>
+        <tr><td>Entropy-based</td><td>1,722</td><td>3.34 GB</td><td>8.0 s</td><td>77.5 s</td><td>309</td><td>0.920</td><td>0.88 m</td></tr>
+        <tr><td>Spaciousness-based</td><td>1,183</td><td>2.30 GB</td><td>5.0 s</td><td>52.8 s</td><td>202</td><td>0.914</td><td>0.90 m</td></tr>
+        <tr class="hl"><td><b>MSA</b></td><td><b>962</b></td><td><b>1.87 GB</b></td><td><b>3.6 s</b></td><td>62.8 s</td><td>148</td><td>0.917</td><td>0.89 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:10px">MSA가 키프레임 · 메모리 · Back-end 시간이 가장 적습니다. 다만 KITTI 00은 구조물이 많은 도심이라 ATE는 방법 간 차이가 0.02 m 이내였고,
+    단순한 Fixed 2 m도 비슷한 정확도를 냈습니다. 차이가 드러날 환경(야지 · 해양)에서의 비교가 다음 단계입니다.</p>
 </section>
 
 <!-- 06 VIDEO -->
@@ -393,28 +457,61 @@
 <!-- 07 TRY IT -->
 <section id="try">
   <div class="eyebrow">07 TRY IT YOURSELF</div>
-  <h2>Try It Yourself<span class="soon">COMING SOON</span></h2>
-  <p>다양한 환경의 LiDAR 데이터셋을 올리고 비교할 방법을 고르면, MSA와 다른 키프레임 샘플링 방법을 같은 조건에서 비교할 수 있게 만들 예정입니다.</p>
+  <h2>Try It Yourself</h2>
+  <p>LiDAR 스캔 시퀀스를 넣고 비교할 방법을 고르면, Code Demo와 같은 파이프라인(KISS-ICP → 키프레임 샘플링 → OverlapTransformer · small_gicp · iSAM2)이
+    <b>All frames(w/o MSA)</b>와 고른 방법들을 같은 조건에서 돌리고 결과를 아래에 그립니다.</p>
+  <div class="srv" id="srv" role="status">데모 서버 확인 중…</div>
+
+  <div class="try-src" role="radiogroup" aria-label="데이터">
+    <label class="src-opt"><input type="radio" name="src" value="sample" checked>
+      <span><b>샘플 · KITTI 00</b><small>서버에 있는 도심 데이터 · 바로 실행</small></span>
+      <select id="sample-frames" aria-label="프레임 수"><option value="500">앞 500 프레임</option><option value="1000">앞 1,000 프레임</option><option value="2000" selected>앞 2,000 프레임</option><option value="4541">전체 4,541 프레임</option></select>
+    </label>
+    <label class="src-opt"><input type="radio" name="src" value="upload">
+      <span><b>내 LiDAR 데이터</b><small>스캔 폴더 업로드 · 1단계 계산 포함 (약 0.1 s/프레임)</small></span>
+    </label>
+  </div>
+
   <div class="drop" id="drop">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5H7z"/><path d="M12 11v6m-2.5-3.5L12 11l2.5 2.5"/></svg>
-    <div class="txt"><b>LiDAR 데이터셋을 여기에 끌어다 놓으세요</b><span>.bin · .pcd · rosbag 지원 예정</span></div>
-    <label class="btn-sq">파일 선택<input type="file" id="file" accept=".bin,.pcd,.bag,.db3,.mcap" hidden></label>
+    <div class="txt"><b>스캔 폴더나 파일을 여기에 끌어다 놓으세요</b>
+      <span>.bin(KITTI 형식) · .pcd, 파일 이름 순서가 시간 순서 · 정확도(ATE · F1)를 보려면 poses.txt(KITTI 형식, 선택)와 calib.txt(선택)도 함께</span></div>
+    <div class="drop-btns">
+      <label class="btn-sq">폴더 선택<input type="file" id="dir" webkitdirectory hidden></label>
+      <label class="btn-sq ghost">파일 선택<input type="file" id="file" multiple accept=".bin,.pcd,.txt" hidden></label>
+    </div>
   </div>
+  <div class="files small muted" id="files"></div>
+
   <div class="chips" role="group" aria-label="비교할 방법">
     <span class="lbl">비교할 방법</span>
-    <button class="chip" aria-pressed="true">MSA</button>
-    <button class="chip" aria-pressed="true">Fixed Interval</button>
-    <button class="chip" aria-pressed="false">Entropy</button>
-    <button class="chip" aria-pressed="false">Spaciousness</button>
+    <span class="chip fixed" title="항상 포함되는 기준선">All frames</span>
+    <button class="chip" data-m="msa" aria-pressed="true">MSA</button>
+    <button class="chip" data-m="fixed_2" aria-pressed="true">Fixed Interval 2 m</button>
+    <button class="chip" data-m="entropy" aria-pressed="false">Entropy</button>
+    <button class="chip" data-m="spaciousness" aria-pressed="false">Spaciousness</button>
+  </div>
+  <div class="run-row">
+    <button class="btn-run" id="run" disabled>실행</button>
+    <div class="prog" id="prog" hidden><div class="prog-bar"><div id="prog-fill"></div></div><span id="prog-txt"></span></div>
   </div>
   <div class="status" id="status" role="status"></div>
+  <div id="try-result" hidden>
+    <div class="table-wrap"><table id="try-table"></table></div>
+    <div class="try-plots" id="try-plots"></div>
+    <p class="small muted" id="try-note"></p>
+  </div>
 </section>
 
 <!-- 08 CODE -->
 <section id="code">
   <div class="eyebrow">08 CODE</div>
   <h2>Code &amp; Citation</h2>
-  <p>코드는 정리가 끝나면 GitHub에 공개합니다. <!-- TODO: 저장소 링크 --></p>
+  <p>코드: <a href="https://github.com/shyun-28/msa-keyframe" target="_blank" rel="noopener">github.com/shyun-28/msa-keyframe</a>
+    (공식 MSA 구현 <a href="https://github.com/LTU-RAI/opt-key" target="_blank" rel="noopener">LTU-RAI/opt-key</a>를 submodule로 사용)</p>
+  <pre class="bib">git clone --recursive https://github.com/shyun-28/msa-keyframe.git
+python run.py --config configs/kitti00.yaml --methods all msa
+python page_assets.py   # 이 페이지의 그림 · GIF 다시 만들기</pre>
   <h3>원 논문 인용</h3>
   <button class="copy" id="copy">복사</button>
   <pre class="bib" id="bib">@article{stathoulopoulos2026msa,
@@ -455,29 +552,51 @@
 </div>
 
 <script>
-// ---- bar chart (paper-reported values) ----
-const METRICS = [
-  {name:"Memory", dir:"↓", all:65.8, msa:40.7, fmt:v=>v.toFixed(1)+" GB", max:65.8},
-  {name:"Time", dir:"↓", all:6742, msa:1925, fmt:v=>v.toLocaleString("en-US")+" s", max:6742},
-  {name:"F1-max", dir:"↑", all:99.8, msa:96.9, fmt:v=>v.toFixed(1)+" %", max:100},
-  {name:"t. ATE 개선율", dir:"↑", all:93.9, msa:92.9, fmt:v=>v.toFixed(1)+" %", max:100},
-];
-const bars = document.getElementById("bars");
-METRICS.forEach(m=>{
-  const el = document.createElement("div");
-  el.className = "metric";
-  const row = (lbl, v, cls) => `<div class="bar-row"><span>${lbl}</span><div class="bar-track">
-      <div class="bar ${cls}" data-w="${(v/m.max*78).toFixed(1)}"></div>
-      <span class="bar-val" data-left="${(v/m.max*78).toFixed(1)}">${m.fmt(v)}</span></div></div>`;
-  el.innerHTML = `<div class="metric-h"><span>${m.name} ${m.dir}</span></div>` + row("All frames", m.all, "") + row("MSA", m.msa, "msa");
-  bars.appendChild(el);
-});
-bars.querySelectorAll(".bar-val").forEach(s=>s.style.left = s.dataset.left + "%");
-const animate = () => bars.querySelectorAll(".bar").forEach(b=>b.style.width = b.dataset.w + "%");
+// ---- bar chart: paper-reported vs our KITTI 00 run (results/kitti_00_4541, assets/kitti00_results.json) ----
+const gb = v=>v.toFixed(2)+" GB", sec = v=>v.toLocaleString("en-US",{maximumFractionDigits:1})+" s", pct = v=>v.toFixed(1)+" %";
+const SETS = {
+  paper: {src:"논문 보고값 [1] · Newer College (Park)", metrics:[
+    {name:"Memory", dir:"↓", all:65.8, msa:40.7, fmt:v=>v.toFixed(1)+" GB"},
+    {name:"Time", dir:"↓", all:6742, msa:1925, fmt:sec},
+    {name:"F1-max", dir:"↑", all:99.8, msa:96.9, fmt:pct, max:100},
+    {name:"t. ATE 개선율", dir:"↑", all:93.9, msa:92.9, fmt:pct, max:100},
+  ]},
+  ours: {src:"재현 · KITTI 00 · 4,541 프레임", metrics:[
+    {name:"Memory", dir:"↓", all:8.83, msa:1.87, fmt:gb},
+    {name:"Time (샘플링 + Back-end)", dir:"↓", all:34.2, msa:66.4, fmt:sec},
+    {name:"Back-end 시간", dir:"↓", all:34.2, msa:3.6, fmt:sec},
+    {name:"F1-max", dir:"↑", all:95.2, msa:91.7, fmt:pct, max:100},
+    {name:"t. ATE 개선율", dir:"↑", all:74.6, msa:74.7, fmt:pct, max:100},
+  ]},
+};
+const bars = document.getElementById("bars"), barsBody = document.getElementById("bars-body");
+let seen = false;
+const animate = () => barsBody.querySelectorAll(".bar").forEach(b=>b.style.width = b.dataset.w + "%");
+const render = key => {
+  const set = SETS[key];
+  document.getElementById("bars-src").textContent = set.src;
+  barsBody.innerHTML = "";
+  set.metrics.forEach(m=>{
+    const max = m.max || Math.max(m.all, m.msa);
+    const el = document.createElement("div");
+    el.className = "metric";
+    const row = (lbl, v, cls) => `<div class="bar-row"><span>${lbl}</span><div class="bar-track">
+        <div class="bar ${cls}" data-w="${(v/max*78).toFixed(1)}"></div>
+        <span class="bar-val" style="left:${(v/max*78).toFixed(1)}%">${m.fmt(v)}</span></div></div>`;
+    el.innerHTML = `<div class="metric-h"><span>${m.name} ${m.dir}</span></div>` + row("All frames", m.all, "") + row("MSA", m.msa, "msa");
+    barsBody.appendChild(el);
+  });
+  if (seen) requestAnimationFrame(()=>requestAnimationFrame(animate));
+};
+bars.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click", ()=>{
+  bars.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  render(b.dataset.set);
+}));
+render("ours");
 if ("IntersectionObserver" in window){
-  const io = new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting)){ animate(); io.disconnect(); } }, {threshold:.3});
+  const io = new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting)){ seen = true; animate(); io.disconnect(); } }, {threshold:.3});
   io.observe(bars);
-} else animate();
+} else { seen = true; animate(); }
 
 // ---- camera / BEV toggle ----
 document.querySelectorAll(".env").forEach(card=>{
@@ -489,22 +608,152 @@ document.querySelectorAll(".env").forEach(card=>{
   }));
 });
 
-// ---- try it (UI only for now) ----
-const drop = document.getElementById("drop"), status = document.getElementById("status");
-const chips = [...document.querySelectorAll(".chip")];
-chips.forEach(c=>c.addEventListener("click", ()=>c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")!=="true")));
-const handle = files => {
-  if (!files || !files.length) return;
-  const f = files[0];
-  const sel = chips.filter(c=>c.getAttribute("aria-pressed")==="true").map(c=>c.textContent);
-  status.innerHTML = `<b>${f.name.replace(/[<>&]/g,"")}</b> (${(f.size/1048576).toFixed(1)} MB) · 비교 방법: ${sel.join(", ") || "선택 없음"}<br>
-    <span class="muted">브라우저 실행 기능은 준비 중입니다. 파일은 업로드되지 않고 이 브라우저 안에만 머뭅니다.</span>`;
-  status.classList.add("on");
-};
-["dragenter","dragover"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.add("over");}));
-["dragleave","drop"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.remove("over");}));
-drop.addEventListener("drop", e=>handle(e.dataTransfer.files));
-document.getElementById("file").addEventListener("change", e=>handle(e.target.files));
+// ---- try it: talks to the local demo server (server.py) ----
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[<>&"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+  const drop = $("drop"), status = $("status"), srv = $("srv"), runBtn = $("run");
+  const chips = [...document.querySelectorAll(".chip[data-m]")];
+  const LABEL = {all:"All frames", msa:"MSA", fixed_2:"Fixed 2 m", entropy:"Entropy", spaciousness:"Spaciousness"};
+  const COLOR = {all:"#6b7a90", msa:"#1b3557", fixed_2:"#2b5a8a", entropy:"#7a5a9e", spaciousness:"#3f7f6a"};
+  const isScan = n => /\.(bin|pcd)$/i.test(n), isAux = n => /^(poses|calib)\.txt$/i.test(n);
+  let online = false, busy = false, files = [];
+
+  const say = (html, on=true) => { status.innerHTML = html; status.classList.toggle("on", on); };
+  const src = () => document.querySelector("input[name=src]:checked").value;
+  const refresh = () => {
+    drop.classList.toggle("disabled", src() !== "upload");
+    const ready = src() === "sample" || files.some(f=>isScan(f.name));
+    runBtn.disabled = !online || busy || !ready || !chips.some(c=>c.getAttribute("aria-pressed")==="true");
+  };
+  document.querySelectorAll("input[name=src]").forEach(r=>r.addEventListener("change", refresh));
+  chips.forEach(c=>c.addEventListener("click", ()=>{ c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")!=="true"); refresh(); }));
+
+  // server check
+  const http = location.protocol.startsWith("http");
+  (http ? fetch("/api/health").then(r=>r.json()) : Promise.reject())
+    .then(h => { online = true; srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
+    .catch(() => { srv.className = "srv off";
+      srv.innerHTML = "실행하려면 로컬 데모 서버에서 이 페이지를 여세요: <code>.venv/bin/python server.py</code> 실행 후 <code>http://localhost:8000</code>"; })
+    .finally(refresh);
+
+  // file collection (input, folder input, drag & drop with folders)
+  const setFiles = list => {
+    files = list.filter(f=>isScan(f.name) || isAux(f.name)).sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
+    const scans = files.filter(f=>isScan(f.name)), mb = files.reduce((s,f)=>s+f.size,0)/1048576;
+    const aux = files.filter(f=>isAux(f.name)).map(f=>f.name);
+    $("files").textContent = scans.length ? `스캔 ${scans.length.toLocaleString()}개 · ${mb.toFixed(1)} MB` + (aux.length ? ` · ${aux.join(", ")} 포함` : " · poses.txt 없음 (정확도 지표 생략)")
+      : (list.length ? "지원하는 스캔(.bin, .pcd)이 없습니다." : "");
+    if (scans.length) { document.querySelector("input[name=src][value=upload]").checked = true; }
+    refresh();
+  };
+  const readEntry = entry => new Promise(res => {
+    if (entry.isFile) return entry.file(f=>res([f]), ()=>res([]));
+    const reader = entry.createReader(), out = [];
+    const next = () => reader.readEntries(async ents => {
+      if (!ents.length) return res(out);
+      for (const e of ents) out.push(...await readEntry(e));
+      next();
+    }, () => res(out));
+    next();
+  });
+  ["dragenter","dragover"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.add("over");}));
+  ["dragleave","drop"].forEach(t=>drop.addEventListener(t, e=>{e.preventDefault(); drop.classList.remove("over");}));
+  drop.addEventListener("drop", async e => {
+    const items = [...e.dataTransfer.items].map(i=>i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (items.length) { const all = []; for (const it of items) all.push(...await readEntry(it)); setFiles(all); }
+    else setFiles([...e.dataTransfer.files]);
+  });
+  $("file").addEventListener("change", e=>setFiles([...e.target.files]));
+  $("dir").addEventListener("change", e=>setFiles([...e.target.files]));
+
+  // progress
+  const prog = (p, txt) => { $("prog").hidden = false; $("prog-fill").style.width = (100*p).toFixed(1)+"%"; $("prog-txt").textContent = txt; };
+
+  const upload = async () => {
+    const session = [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");
+    let done = 0, i = 0;
+    const one = async () => {
+      while (i < files.length) {
+        const f = files[i++];
+        const r = await fetch(`/api/upload?session=${session}&name=${encodeURIComponent(f.name)}`, {method:"POST", body:f});
+        if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+        prog(0, `업로드 ${++done}/${files.length}`);
+      }
+    };
+    await Promise.all([one(), one(), one(), one()]);
+    return session;
+  };
+
+  runBtn.addEventListener("click", async () => {
+    busy = true; refresh(); $("try-result").hidden = true; say("", false);
+    const methods = chips.filter(c=>c.getAttribute("aria-pressed")==="true").map(c=>c.dataset.m);
+    try {
+      const body = {methods};
+      if (src() === "sample") { body.sample = "kitti00"; body.max_frames = +$("sample-frames").value; }
+      else body.session = await upload();
+      const r = await fetch("/api/run", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      const t0 = Date.now();
+      for (;;) {
+        await new Promise(r=>setTimeout(r, 700));
+        const s = await (await fetch(`/api/job?id=${j.id}`)).json();
+        prog(s.progress || 0, `${s.stage} · ${((Date.now()-t0)/1000).toFixed(0)} s`);
+        if (s.state === "done") { render(s.result); break; }
+        if (s.state === "error") throw new Error(s.error);
+      }
+    } catch (e) {
+      say(`<b>실행 실패</b> · ${esc(e.message || e)}`);
+    } finally { busy = false; refresh(); }
+  });
+
+  // results
+  const f1 = (v, d=1) => v == null ? "–" : v.toFixed(d);
+  function render(res) {
+    const ms = res.methods, gt = res.has_gt;
+    ms.forEach(m=>{ if (m.metrics.loops == null) m.metrics.loops = m.loops.length; });  // no GT -> no loop metrics
+    const cols = [["방법", m=>`<b>${LABEL[m.method]||m.method}</b>`], ["Keyframes", m=>m.metrics.keyframes.toLocaleString()],
+      ["Memory", m=>{ const v=m.metrics.memory_raw_scans_MB; return v>=1000 ? (v/1000).toFixed(2)+" GB" : v.toFixed(0)+" MB"; }],
+      ["Back-end", m=>f1(m.metrics.time_backend_s)+" s"], ["샘플링", m=>f1(m.metrics.time_sampling_s)+" s"], ["Loops", m=>m.metrics.loops ?? "–"]];
+    if (gt) cols.push(["F1-max", m=>f1(m.metrics.f1_max, 3)], ["ATE", m=>f1(m.metrics.ate_opt_m, 2)+" m"]);
+    $("try-table").innerHTML = `<thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>` +
+      ms.map(m=>`<tr${m.method==="msa"?' class="hl"':""}>${cols.map(c=>`<td>${c[1](m)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    const plots = $("try-plots"); plots.innerHTML = "";
+    const all = [...(res.gt||[]), ...ms.flatMap(m=>m.traj)];
+    const xs = all.map(p=>p[0]), ys = all.map(p=>p[1]);
+    const box = {x0:Math.min(...xs), x1:Math.max(...xs), y0:Math.min(...ys), y1:Math.max(...ys)};
+    ms.forEach(m => {
+      const fig = document.createElement("figure"), cv = document.createElement("canvas");
+      fig.appendChild(cv);
+      fig.insertAdjacentHTML("beforeend", `<figcaption><b>${LABEL[m.method]||m.method}</b> · 키프레임 ${m.metrics.keyframes.toLocaleString()} · 루프 ${m.loops.length}</figcaption>`);
+      plots.appendChild(fig);
+      draw(cv, m, res.gt, box);
+    });
+    const s1 = res.stage1_s;
+    $("try-note").textContent = `${res.frames.toLocaleString()} 프레임 · 1단계(공통) KISS-ICP ${s1.frontend.toFixed(1)} s, OverlapTransformer ${s1.descriptor.toFixed(1)} s` +
+      (gt ? " · 궤적은 GT에 SE(3) 정렬, 회색 띠 = GT" : " · poses.txt가 없어 F1 · ATE는 생략했고 궤적은 정렬하지 않았습니다") + " · 점 = 키프레임, 빨간 선 = 루프 클로저";
+    $("try-result").hidden = false;
+    $("try-result").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  function draw(cv, m, gt, b) {
+    const dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 260;
+    cv.width = cv.height = W * dpr;
+    const c = cv.getContext("2d"); c.scale(dpr, dpr);
+    const pad = 10, s = (W - 2*pad) / Math.max(b.x1-b.x0, b.y1-b.y0, 1e-6);
+    const ox = pad + ((W-2*pad) - (b.x1-b.x0)*s)/2, oy = pad + ((W-2*pad) - (b.y1-b.y0)*s)/2;
+    const P = p => [ox + (p[0]-b.x0)*s, W - (oy + (p[1]-b.y0)*s)];
+    const line = (pts, color, w) => { c.strokeStyle = color; c.lineWidth = w; c.lineJoin = "round"; c.beginPath();
+      pts.forEach((p,i)=>{ const [x,y]=P(p); i ? c.lineTo(x,y) : c.moveTo(x,y); }); c.stroke(); };
+    if (gt) line(gt, "#e6e9ee", 5);
+    line(m.traj, "#1d2430", 0.8);
+    c.strokeStyle = "#d1352b"; c.lineWidth = 1;
+    m.loops.forEach(([q,k])=>{ const a=P(m.traj[q]), bb=P(m.traj[k]); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(bb[0],bb[1]); c.stroke(); });
+    c.fillStyle = COLOR[m.method] || "#1b3557";
+    const r = m.keyframes.length > 2000 ? 0.9 : 1.6;
+    m.keyframes.forEach(k=>{ const [x,y]=P(m.traj[k]); c.beginPath(); c.arc(x,y,r,0,7); c.fill(); });
+  }
+})();
 
 // ---- copy bibtex ----
 document.getElementById("copy").addEventListener("click", async e=>{

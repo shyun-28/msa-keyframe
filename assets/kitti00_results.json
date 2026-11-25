@@ -1,0 +1,80 @@
+{
+ "all": {
+  "keyframes": 4541,
+  "memory_raw_scans_MB": 8827.2752,
+  "time_sampling_s": 0.005147411487996578,
+  "time_backend_s": 34.169485276564956,
+  "time_total_s": 34.17463268805295,
+  "loops": 824,
+  "loop_precision": 1.0,
+  "f1_max": 0.9518072289156626,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8899317801891182,
+  "ate_improvement_pct": 74.57753370071732
+ },
+ "msa": {
+  "keyframes": 962,
+  "memory_raw_scans_MB": 1869.1256,
+  "time_sampling_s": 62.80965043697506,
+  "time_backend_s": 3.5779548631981015,
+  "time_total_s": 66.38760530017316,
+  "loops": 148,
+  "loop_precision": 1.0,
+  "f1_max": 0.9173036831132731,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8859560407720968,
+  "ate_improvement_pct": 74.69110768873973
+ },
+ "fixed_1": {
+  "keyframes": 2717,
+  "memory_raw_scans_MB": 5280.144912,
+  "time_sampling_s": 0.23054643720388412,
+  "time_backend_s": 12.51632435619831,
+  "time_total_s": 12.746870793402195,
+  "loops": 514,
+  "loop_precision": 1.0,
+  "f1_max": 0.9475806451612903,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8964235210428751,
+  "ate_improvement_pct": 74.39208570711581
+ },
+ "fixed_2": {
+  "keyframes": 1541,
+  "memory_raw_scans_MB": 2994.449792,
+  "time_sampling_s": 0.15305461827665567,
+  "time_backend_s": 5.91926499363035,
+  "time_total_s": 6.072319611907005,
+  "loops": 282,
+  "loop_precision": 1.0,
+  "f1_max": 0.9344490934449093,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8837208858370038,
+  "ate_improvement_pct": 74.7549588201141
+ },
+ "entropy": {
+  "keyframes": 1722,
+  "memory_raw_scans_MB": 3342.40144,
+  "time_sampling_s": 77.47023003548384,
+  "time_backend_s": 8.046117064543068,
+  "time_total_s": 85.5163471000269,
+  "loops": 309,
+  "loop_precision": 1.0,
+  "f1_max": 0.920315865039483,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8804195008117763,
+  "ate_improvement_pct": 74.84926868904243
+ },
+ "spaciousness": {
+  "keyframes": 1183,
+  "memory_raw_scans_MB": 2300.424896,
+  "time_sampling_s": 52.814214842393994,
+  "time_backend_s": 4.9555375492200255,
+  "time_total_s": 57.76975239161402,
+  "loops": 202,
+  "loop_precision": 1.0,
+  "f1_max": 0.9141274238227146,
+  "ate_odom_m": 3.5005721699559453,
+  "ate_opt_m": 0.8963091006904675,
+  "ate_improvement_pct": 74.39535432569735
+ }
+}

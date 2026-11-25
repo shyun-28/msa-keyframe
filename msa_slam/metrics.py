@@ -45,6 +45,8 @@ def pr_metrics(similarities: List[float], distances: List[float], delta: float) 
     """Same thresholds and TP/FP/FN definition as the official MSA evaluation
     (opt-key examples/pr_example.py: compute_pr_metrics_from_arrays)."""
     sim, dist = np.asarray(similarities), np.asarray(distances)
+    if not np.any(dist <= delta):  # no revisit within delta: precision/recall undefined
+        return {"auc": float("nan"), "f1_max": float("nan"), "precisions": [], "recalls": []}
     precisions, recalls, f1s = [], [], []
     for theta in np.arange(0, 100, 1):
         thr = theta / 100

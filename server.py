@@ -1,0 +1,223 @@
+"""Local demo server for the project page's "Try It Yourself" section.
+
+    .venv/bin/python server.py            # then open http://localhost:8000
+
+Serves index.html and assets/, accepts LiDAR scans uploaded from the page,
+runs the same pipeline as run.py (KISS-ICP -> sampling -> OverlapTransformer /
+small_gicp / iSAM2) and returns metrics, trajectories, keyframes and loops.
+Binds to 127.0.0.1 only. Jobs run one at a time.
+"""
+
+import argparse
+import json
+import mimetypes
+import os
+import queue
+import re
+import shutil
+import threading
+import time
+import traceback
+import uuid
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
+
+import numpy as np
+import yaml
+
+from msa_slam import ROOT
+from msa_slam.data import SCAN_EXTS, FolderScans, KittiOdometry
+from msa_slam.descriptors import make_descriptor
+from msa_slam.frontend import make_frontend
+from msa_slam.metrics import umeyama_se3
+from msa_slam.pipeline import run_frontend, run_method
+
+CFG = yaml.safe_load(open(os.path.join(ROOT, "configs", "kitti00.yaml")))
+UPLOAD_DIR = os.path.join(ROOT, "results", "uploads")
+DEMO_DIR = os.path.join(ROOT, "results", "demo")
+ALLOWED_METHODS = {"all", "msa", "fixed_1", "fixed_2", "fixed_3", "entropy", "spaciousness"}
+UPLOAD_NAMES = re.compile(r"^[\w.\-]+\.(bin|pcd)$|^(poses|calib)\.txt$", re.I)
+MAX_FRAMES = 6000
+
+SAMPLES = {}
+if os.path.isdir(os.path.join(CFG["dataset"]["root"], "sequences", "00", "velodyne")):
+    SAMPLES["kitti00"] = {"name": "KITTI 00 (도심, 서버 보관)", "frames": 4541,
+                          "cache": os.path.join(ROOT, "results", "kitti_00_4541", "stage1_cache.npz")}
+
+JOBS = {}
+QUEUE = queue.Queue()
+_descriptor = None
+
+
+def descriptor():
+    global _descriptor
+    if _descriptor is None:
+        _descriptor = make_descriptor(CFG["descriptor"])
+    return _descriptor
+
+
+def _xy(a):
+    return np.round(a[:, :2], 2).tolist()
+
+
+def run_job(job):
+    job.update(state="running", stage="데이터 확인", progress=0.0)
+    if job["source"] == "sample":
+        ds = KittiOdometry(CFG["dataset"]["root"], CFG["dataset"]["sequence"])
+        extra = [SAMPLES["kitti00"]["cache"]]
+    else:
+        ds = FolderScans(job["folder"], name="upload")
+        extra = []
+    n = min(len(ds), job["max_frames"] or len(ds), MAX_FRAMES)
+    out = os.path.join(DEMO_DIR, job["id"])
+    methods = job["methods"]
+    steps = 1 + len(methods)
+
+    def prog(stage_idx, label):
+        def f(i, total):
+            job["stage"] = f"{label} {i}/{total}"
+            job["progress"] = (stage_idx + i / total) / steps
+        return f
+
+    cache = os.path.join(out, "stage1_cache.npz")
+    have_cache = any(os.path.exists(p) for p in [cache] + extra)
+    fe = None if have_cache else make_frontend(CFG["frontend"])
+    desc = None if have_cache else descriptor()
+    stage1 = run_frontend(ds, fe, desc, n, CFG["backend"].get("fine_voxel", 0.5), cache,
+                          progress=prog(0, "1단계 · KISS-ICP + OverlapTransformer"), extra_caches=extra)
+
+    gt = ds.gt_poses[:n] if ds.gt_poses is not None else None
+    res = {"frames": n, "has_gt": gt is not None, "methods": []}
+    T_align = None
+    if gt is not None:
+        res["gt"] = _xy(gt[:, :3, 3])
+    for k, m in enumerate(methods):
+        r = run_method(m, ds, stage1, n, CFG, os.path.join(out, m), progress=prog(1 + k, f"2단계 · {m}"))
+        traj = r["_traj"][:, :3, 3]
+        if gt is not None:
+            T_align = umeyama_se3(traj, gt[:, :3, 3])
+            traj = (T_align[:3, :3] @ traj.T).T + T_align[:3, 3]
+        metrics = {k2: (None if isinstance(v, float) and not np.isfinite(v) else v)
+                   for k2, v in r.items() if not k2.startswith("_") and not isinstance(v, dict)}
+        res["methods"].append({
+            "method": m, "metrics": metrics, "traj": _xy(traj),
+            "keyframes": [int(x) for x in r["_keyframes"]],
+            "loops": [[lp["query_frame"], lp["match_frame"]] for lp in r["_loops"]],
+        })
+    odom = stage1["odom"][:, :3, 3]
+    if gt is not None:
+        T = umeyama_se3(odom, gt[:, :3, 3])
+        odom = (T[:3, :3] @ odom.T).T + T[:3, 3]
+    res["odom"] = _xy(odom)
+    res["stage1_s"] = {"frontend": float(stage1["t_frontend"]), "descriptor": float(stage1["t_descriptor"])}
+    job.update(state="done", stage="완료", progress=1.0, result=res)
+
+
+def worker():
+    while True:
+        job = QUEUE.get()
+        try:
+            run_job(job)
+        except Exception as e:  # report to the page instead of dying
+            traceback.print_exc()
+            job.update(state="error", stage="오류", error=f"{type(e).__name__}: {e}")
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, code, body, ctype="application/json; charset=utf-8"):
+        if not isinstance(body, (bytes, bytearray)):
+            body = json.dumps(body, ensure_ascii=False).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        if "/api/job" not in (args[0] if args else ""):
+            super().log_message(fmt, *args)
+
+    def do_GET(self):
+        url = urlparse(self.path)
+        q = parse_qs(url.query)
+        if url.path == "/api/health":
+            return self._send(200, {"ok": True, "busy": any(j["state"] == "running" for j in JOBS.values()),
+                                    "samples": [{"id": k, "name": v["name"], "frames": v["frames"]}
+                                                for k, v in SAMPLES.items()]})
+        if url.path == "/api/job":
+            job = JOBS.get(q.get("id", [""])[0])
+            if not job:
+                return self._send(404, {"error": "unknown job"})
+            return self._send(200, {k: v for k, v in job.items() if k != "folder"})
+        # static: index.html and assets/ only
+        rel = "index.html" if url.path in ("/", "/index.html") else url.path.lstrip("/")
+        path = os.path.realpath(os.path.join(ROOT, rel))
+        if not (rel == "index.html" or path.startswith(os.path.join(ROOT, "assets") + os.sep)) or not os.path.isfile(path):
+            return self._send(404, {"error": "not found"})
+        with open(path, "rb") as f:
+            self._send(200, f.read(), mimetypes.guess_type(path)[0] or "application/octet-stream")
+
+    def do_POST(self):
+        url = urlparse(self.path)
+        q = parse_qs(url.query)
+        length = int(self.headers.get("Content-Length", 0))
+        if url.path == "/api/upload":
+            session = q.get("session", [""])[0]
+            name = os.path.basename(q.get("name", [""])[0])
+            if not re.fullmatch(r"[0-9a-f]{32}", session) or not UPLOAD_NAMES.match(name):
+                self.rfile.read(length)
+                return self._send(400, {"error": "지원하지 않는 파일입니다 (.bin, .pcd, poses.txt, calib.txt)"})
+            folder = os.path.join(UPLOAD_DIR, session)
+            os.makedirs(folder, exist_ok=True)
+            with open(os.path.join(folder, name), "wb") as f:
+                remaining = length
+                while remaining:
+                    chunk = self.rfile.read(min(remaining, 1 << 20))
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    remaining -= len(chunk)
+            return self._send(200, {"ok": True})
+        if url.path == "/api/run":
+            try:
+                req = json.loads(self.rfile.read(length) or b"{}")
+            except json.JSONDecodeError:
+                return self._send(400, {"error": "bad json"})
+            methods = ["all"] + [m for m in req.get("methods", []) if m in ALLOWED_METHODS and m != "all"]
+            job = {"id": uuid.uuid4().hex, "state": "queued", "stage": "대기 중", "progress": 0.0,
+                   "methods": methods, "max_frames": int(req.get("max_frames") or 0), "created": time.time()}
+            if req.get("sample"):
+                if req["sample"] not in SAMPLES:
+                    return self._send(400, {"error": "unknown sample"})
+                job["source"] = "sample"
+            else:
+                session = str(req.get("session", ""))
+                folder = os.path.join(UPLOAD_DIR, session)
+                if not re.fullmatch(r"[0-9a-f]{32}", session) or not os.path.isdir(folder):
+                    return self._send(400, {"error": "업로드된 파일이 없습니다"})
+                if not any(f.lower().endswith(SCAN_EXTS) for f in os.listdir(folder)):
+                    return self._send(400, {"error": ".bin 또는 .pcd 스캔이 없습니다"})
+                job.update(source="upload", folder=folder)
+            JOBS[job["id"]] = job
+            QUEUE.put(job)
+            return self._send(200, {"id": job["id"]})
+        self._send(404, {"error": "not found"})
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--clean", action="store_true", help="delete previous uploads and demo results")
+    a = ap.parse_args()
+    if a.clean:
+        shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
+        shutil.rmtree(DEMO_DIR, ignore_errors=True)
+    threading.Thread(target=worker, daemon=True).start()
+    srv = ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
+    print(f"MSA demo server: http://localhost:{a.port}  (samples: {', '.join(SAMPLES) or 'none'})")
+    srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

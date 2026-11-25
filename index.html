@@ -155,8 +155,11 @@
   .try-src{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px}
   .local{border:1.5px solid var(--line); border-radius:var(--radius); padding:14px; background:#f6f9fc}
   .local-path{display:flex; gap:8px}
-  .presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
+  .presets{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center; margin-bottom:12px}
   .presets:empty{display:none}
+  .presets .grp{font-size:12.5px; font-weight:700; color:var(--ink-2)}
+  .presets .row{display:flex; flex-wrap:wrap; gap:6px}
+  .presets select{font:inherit; font-size:13px; padding:4px 8px; border-radius:8px; border:1.5px solid var(--navy); color:var(--navy); max-width:100%}
   .presets button{border:1.5px solid var(--navy); background:#fff; color:var(--navy); font:inherit; font-size:13px; font-weight:600; padding:4px 11px; border-radius:999px; cursor:pointer}
   .presets button[aria-pressed=true]{background:var(--navy); color:#fff}
   .local-path input{flex:1; min-width:0; font:13px "JetBrains Mono",monospace; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff}
@@ -167,6 +170,7 @@
   .local-list .tag{font-size:12px; color:#2d5b35; background:#eef6ef; border-radius:999px; padding:1px 8px; white-space:nowrap}
   .local-info{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:13.5px; color:var(--ink-2)}
   .local-info b{color:var(--navy)}
+  .local-note{flex-basis:100%; font-size:12.5px; color:#7a3d12; background:var(--orange-soft); border:1px solid #efc4a3; border-radius:6px; padding:6px 10px}
   .local-info select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
   .src-opt{display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:var(--radius); padding:12px 14px; cursor:pointer; flex-wrap:wrap}
   .src-opt:has(input:checked){border-color:var(--navy); background:#f6f9fc}
@@ -271,7 +275,7 @@
     <div class="card pillar">
       <div class="num">02</div>
       <h4>Multi-Environment</h4>
-      <p>도심(KITTI)뿐 아니라 논문에서 다루지 않은 야지(DiTer)와 해양(SeePerSea) LiDAR 데이터에도 적용합니다.</p>
+      <p>도심(KITTI)뿐 아니라 논문에서 다루지 않은 야지(DiTer) LiDAR 데이터에도 적용합니다.</p>
     </div>
     <div class="card pillar">
       <div class="num">03</div>
@@ -310,7 +314,7 @@
 
   <div class="try-src" role="radiogroup" aria-label="데이터">
     <label class="src-opt"><input type="radio" name="src" value="local" checked>
-      <span><b>이 PC의 데이터</b><small>KITTI 바로가기 또는 스캔 폴더 · 업로드 없이 서버가 바로 읽음 · 크기 제한 없음</small></span>
+      <span><b>이 PC의 데이터</b><small>KITTI · DiTer 바로가기 또는 스캔 폴더 · 업로드 없이 서버가 바로 읽음 · 크기 제한 없음</small></span>
     </label>
     <label class="src-opt"><input type="radio" name="src" value="upload">
       <span><b>파일 업로드</b><small>브라우저로 파일을 보냄 · 1.7 GB까지</small></span>
@@ -400,7 +404,6 @@ python page_assets.py   # 이 페이지의 그림 · GIF 다시 만들기</pre>
     <li>M. Kaess et al., “iSAM2,” ICRA, 2011.</li>
     <li>A. Geiger et al., “Are we ready for Autonomous Driving? The KITTI Vision Benchmark Suite,” CVPR, 2012.</li>
     <li>S. Jeong, H. Kim, Y. Cho, “DiTer: Diverse Terrain and Multi-Modal Dataset for Field Robot Navigation in Outdoor Environments,” IEEE Sensors Letters, 2024.</li>
-    <li>M. Jeong et al., “SeePerSea: Multimodal Perception Dataset of In-Water Objects for Autonomous Surface Vehicles,” IEEE T-FR, 2025.</li>
     <li>T. Shan et al., “LIO-SAM,” IROS, 2020.</li>
     <li>Y. Huang et al., “DiSCo-SLAM,” IEEE RA-L, 2022.</li>
     <li>Y. Chang et al., “LAMP 2.0,” IEEE RA-L, 2022.</li>
@@ -411,7 +414,7 @@ python page_assets.py   # 이 페이지의 그림 · GIF 다시 만들기</pre>
 
   <footer>
     <span>정석환 · 윤승희 — 공간지능특론, Spatial AI and Robotics Lab.</span>
-    <span>데이터셋 이미지 출처: KITTI, DiTer, SeePerSea</span>
+    <span>데이터셋 이미지 출처: KITTI, DiTer</span>
   </footer>
 </section>
 
@@ -430,10 +433,10 @@ const SETS = {
   ]},
   ours: {src:"재현 · KITTI 00 · 4,541 프레임", metrics:[
     {name:"Memory", dir:"↓", all:8.83, msa:1.87, fmt:gb},
-    {name:"Time (샘플링 + Back-end)", dir:"↓", all:34.2, msa:66.4, fmt:sec},
-    {name:"Back-end 시간", dir:"↓", all:34.2, msa:3.6, fmt:sec},
+    {name:"Time (샘플링 + Back-end)", dir:"↓", all:36.2, msa:65.8, fmt:sec},
+    {name:"Back-end 시간", dir:"↓", all:36.2, msa:3.6, fmt:sec},
     {name:"F1-max", dir:"↑", all:95.2, msa:91.7, fmt:pct, max:100},
-    {name:"t. ATE 개선율", dir:"↑", all:74.6, msa:74.7, fmt:pct, max:100},
+    {name:"t. ATE 개선율", dir:"↑", all:74.6, msa:74.9, fmt:pct, max:100},
   ]},
 };
 const bars = document.getElementById("bars"), barsBody = document.getElementById("bars-body");
@@ -482,17 +485,18 @@ document.querySelectorAll(".env").forEach(card=>{
   const drop = $("drop"), status = $("status"), srv = $("srv"), runBtn = $("run");
   const chips = [...document.querySelectorAll(".chip[data-m]")];
   const LABEL = {all:"All frames", msa:"MSA", fixed_2:"Fixed 2 m", entropy:"Entropy", spaciousness:"Spaciousness"};
+  const FE = {kiss_icp:"KISS-ICP", gicp:"GICP (스캔 간)"};
   const COLOR = {all:"#6b7a90", msa:"#1b3557", fixed_2:"#2b5a8a", entropy:"#7a5a9e", spaciousness:"#3f7f6a"};
   const isScan = n => /\.(bin|pcd)$/i.test(n), isAux = n => /^(poses|calib)\.txt$/i.test(n);
   let online = false, busy = false, files = [];
 
   const say = (html, on=true) => { status.innerHTML = html; status.classList.toggle("on", on); };
   const src = () => document.querySelector("input[name=src]:checked").value;
-  let local = null, presets = [];  // last folder opened in the browser; KITTI shortcuts from the server
+  let local = null, presets = [];  // last folder opened in the browser; dataset shortcuts from the server
   const refresh = () => {
     drop.hidden = src() !== "upload";
     $("local").hidden = src() !== "local";
-    if (src() === "local" && !local && online) browse(presets[0]?.path || "");
+    if (src() === "local" && !local && online) browse(presets[0]?.items[0]?.path || "");
     const ready = src() === "local" ? !!(local && local.scans) : files.some(f=>isScan(f.name));
     runBtn.disabled = !online || busy || !ready || !chips.some(c=>c.getAttribute("aria-pressed")==="true");
   };
@@ -506,6 +510,7 @@ document.querySelectorAll(".env").forEach(card=>{
       if (!r.ok) throw new Error(d.error);
       local = d; $("local-path").value = d.path;
       $("presets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.path === d.path));
+      $("presets").querySelectorAll("select").forEach(sel=>{ sel.value = [...sel.options].some(o=>o.value === d.path) ? d.path : ""; });
       $("local-list").innerHTML = d.dirs.length ? d.dirs.map(x=>`<button type="button" data-name="${esc(x.name)}"><span>📁 ${esc(x.name)}</span>${x.scans ? '<span class="tag">스캔 있음</span>' : ""}</button>`).join("")
         : "";
       $("local-list").hidden = !d.dirs.length;
@@ -515,7 +520,8 @@ document.querySelectorAll(".env").forEach(card=>{
       $("local-info").innerHTML = d.scans
         ? `<b>스캔 ${d.scans.toLocaleString()}개 · ${(d.mb/1024).toFixed(2)} GB</b>` +
           `<span>${d.poses ? "정답 포즈: " + esc(d.poses.split("/").slice(-2).join("/")) : "정답 포즈 없음 (F1 · ATE 생략)"}</span>` +
-          `<select id="local-frames" aria-label="프레임 수">${opts}<option value="0">전체 ${d.scans.toLocaleString()} 프레임</option></select>`
+          `<select id="local-frames" aria-label="프레임 수">${opts}<option value="0">전체 ${d.scans.toLocaleString()} 프레임</option></select>` +
+          `<span>Front-end: ${esc(FE[d.frontend] || d.frontend)}</span>` + (d.note ? `<div class="local-note">${esc(d.note)}</div>` : "")
         : "이 폴더에는 .bin / .pcd 스캔이 없습니다. 스캔이 든 폴더로 들어가세요.";
       const sel = $("local-frames");  // default: 2,000 frames when longer (keeps a first run short)
       if (sel) sel.value = d.scans > 2000 ? "2000" : "0";
@@ -533,8 +539,13 @@ document.querySelectorAll(".env").forEach(card=>{
   const http = location.protocol.startsWith("http");
   (http ? fetch("/api/health").then(r=>r.json()) : Promise.reject())
     .then(h => { online = true; presets = h.presets || [];
-      $("presets").innerHTML = presets.map(p=>`<button type="button" data-path="${esc(p.path)}" aria-pressed="false">${esc(p.name)}</button>`).join("");
-      $("presets").querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>browse(b.dataset.path))); srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
+      // short groups as buttons, long ones (more than 12 folders) as a dropdown
+      $("presets").innerHTML = presets.map(g=>`<span class="grp">${esc(g.group)}</span><div class="row">` + (g.items.length <= 12
+          ? g.items.map(p=>`<button type="button" data-path="${esc(p.path)}" aria-pressed="false">${esc(p.name)}</button>`).join("")
+          : `<select aria-label="${esc(g.group)}"><option value="">${g.items.length}개 중 선택…</option>` +
+            g.items.map(p=>`<option value="${esc(p.path)}">${esc(p.name)}</option>`).join("") + "</select>") + "</div>").join("");
+      $("presets").querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>browse(b.dataset.path)));
+      $("presets").querySelectorAll("select").forEach(sel=>sel.addEventListener("change", ()=>sel.value && browse(sel.value))); srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
     .catch(() => { srv.className = "srv off";
       srv.innerHTML = "실행하려면 로컬 데모 서버에서 이 페이지를 여세요: <code>.venv/bin/python server.py</code> 실행 후 <code>http://localhost:8000</code>"; })
     .finally(refresh);
@@ -664,8 +675,9 @@ document.querySelectorAll(".env").forEach(card=>{
     });
     const s1 = res.stage1_s;
     $("try-note").textContent = `${res.frames.toLocaleString()} 프레임 · ` +
-      (s1 ? `1단계(공통) KISS-ICP ${s1.frontend.toFixed(1)} s, OverlapTransformer ${s1.descriptor.toFixed(1)} s` : "1단계(공통)는 이 폴더에서 이전에 계산한 결과를 다시 사용") +
-      " · Time = 키프레임 샘플링 + Back-end, Memory = 키프레임 원본 스캔 크기 합, t. ATE 개선율 = KISS-ICP만 쓴 궤적 대비" +
+      `Front-end ${FE[res.frontend] || res.frontend} · ` +
+      (s1 ? `1단계(공통) ${FE[res.frontend] || res.frontend} ${s1.frontend.toFixed(1)} s, OverlapTransformer ${s1.descriptor.toFixed(1)} s` : "1단계(공통)는 이 폴더에서 이전에 계산한 결과를 다시 사용") +
+      " · Time = 키프레임 샘플링 + Back-end, Memory = 키프레임 원본 스캔 크기 합, t. ATE 개선율 = Front-end 오도메트리만 쓴 궤적 대비" +
       (gt ? " · 궤적은 GT에 SE(3) 정렬, 회색 띠 = GT" : " · poses.txt가 없어 F1-max · t. ATE 개선율은 생략했고 궤적은 정렬하지 않았습니다") + " · 점 = 키프레임, 빨간 원 = 루프 클로저가 생긴 위치";
     $("try-result").hidden = false;
     $("try-result").scrollIntoView({behavior:"smooth", block:"start"});

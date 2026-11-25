@@ -9,6 +9,7 @@ Binds to 127.0.0.1 only. Jobs run one at a time.
 """
 
 import argparse
+import glob
 import hashlib
 import json
 import mimetypes
@@ -43,20 +44,35 @@ UPLOAD_NAMES = re.compile(r"^[\w.\-]+\.(bin|pcd)$|^(poses|calib)\.txt$", re.I)
 MAX_FRAMES = 6000
 
 # KITTI sequences on this PC, offered as one-click shortcuts in the folder browser
-KITTI_SEQ_DIR = os.path.join(CFG["dataset"]["root"], "sequences")
 KITTI00_CACHE = os.path.join(ROOT, "results", "kitti_00_4541", "stage1_cache.npz")  # from run.py
+DATASETS = yaml.safe_load(open(os.path.join(ROOT, "configs", "demo_datasets.yaml")))
 
 
-def kitti_presets():
-    if not os.path.isdir(KITTI_SEQ_DIR):
-        return []
+def dataset_for(path):
+    """The demo_datasets.yaml group a folder belongs to (by root prefix), or {}."""
+    for d in DATASETS:
+        root = os.path.realpath(d["root"])
+        if path == root or path.startswith(root + os.sep):
+            return d
+    return {}
+
+
+def frontend_cfg(path):
+    return dataset_for(path).get("frontend") or CFG["frontend"]
+
+
+def presets():
+    """Dataset shortcuts for the page, grouped, from configs/demo_datasets.yaml."""
     out = []
-    for seq in sorted(os.listdir(KITTI_SEQ_DIR)):
-        vel = os.path.join(KITTI_SEQ_DIR, seq, "velodyne")
-        if os.path.isdir(vel):
-            out.append({"name": f"KITTI {seq}", "path": os.path.realpath(vel)})
+    for d in DATASETS:
+        items = []
+        for path in sorted(glob.glob(os.path.join(d["root"], d["pattern"]))):
+            if os.path.isdir(path) and scan_folder_info(path)["scans"]:
+                rel = os.path.relpath(path, d["root"]).split(os.sep)
+                items.append({"name": d.get("label", "{0}").format(*rel), "path": os.path.realpath(path)})
+        if items:
+            out.append({"group": d["group"], "items": items})
     return out
-
 
 
 def scan_folder_info(path):
@@ -89,14 +105,18 @@ def browse(path):
             if len(dirs) >= 500:
                 break
     parent = os.path.dirname(path)
-    return {"path": path, "parent": parent if parent != path else None, "dirs": dirs, **scan_folder_info(path)}
+    ds = dataset_for(path)
+    return {"path": path, "parent": parent if parent != path else None, "dirs": dirs,
+            "frontend": frontend_cfg(path)["name"], "note": ds.get("note"), **scan_folder_info(path)}
 
 
-def local_cache_path(path, n_scans):
-    key = hashlib.sha1(f"{path}|{n_scans}|{os.stat(path).st_mtime_ns}".encode()).hexdigest()[:16]
+def local_cache_path(path, n_scans, frontend):
+    key = hashlib.sha1(f"{path}|{n_scans}|{os.stat(path).st_mtime_ns}|{frontend}".encode()).hexdigest()[:16]
     return os.path.join(LOCAL_CACHE_DIR, key, "stage1_cache.npz")
 
 
+FE_LABEL = {"kiss_icp": "KISS-ICP", "gicp": "GICP"}
+PRESETS = []
 JOBS = {}
 QUEUE = queue.Queue()
 _descriptor = None
@@ -118,12 +138,14 @@ def run_job(job):
     if job["source"] == "local":
         pose, calib = find_sidecars(job["folder"])
         ds = FolderScans(job["folder"], pose_file=pose, calib_file=calib)
-        extra = [local_cache_path(job["folder"], len(ds))]  # stage 1 kept per folder for re-runs
+        fe_cfg = frontend_cfg(job["folder"])
+        extra = [local_cache_path(job["folder"], len(ds), fe_cfg)]  # stage 1 kept per folder for re-runs
         k00 = os.path.realpath(os.path.join(CFG["dataset"]["root"], "sequences", "00", "velodyne"))
         if job["folder"] == k00:  # stage 1 already computed by run.py for KITTI 00
             extra.append(KITTI00_CACHE)
     else:
         ds = FolderScans(job["folder"], name="upload")
+        fe_cfg = CFG["frontend"]
         extra = []
     n = min(len(ds), job["max_frames"] or len(ds), MAX_FRAMES)
     out = os.path.join(DEMO_DIR, job["id"])
@@ -138,13 +160,14 @@ def run_job(job):
 
     cache = extra[0] if job["source"] == "local" else os.path.join(out, "stage1_cache.npz")
     have_cache = any(os.path.exists(p) and len(np.load(p, mmap_mode="r")["odom"]) >= n for p in [cache] + extra)
-    fe = None if have_cache else make_frontend(CFG["frontend"])
+    fe = None if have_cache else make_frontend(fe_cfg)
     desc = None if have_cache else descriptor()
     stage1 = run_frontend(ds, fe, desc, n, CFG["backend"].get("fine_voxel", 0.5), cache,
-                          progress=prog(0, "1단계 · KISS-ICP + OverlapTransformer"), extra_caches=extra)
+                          progress=prog(0, f"1단계 · {FE_LABEL.get(fe_cfg['name'], fe_cfg['name'])} + OverlapTransformer"), extra_caches=extra)
 
     gt = ds.gt_poses[:n] if ds.gt_poses is not None else None
-    res = {"frames": n, "total_frames": len(ds), "has_gt": gt is not None, "methods": []}
+    res = {"frames": n, "total_frames": len(ds), "has_gt": gt is not None, "methods": [],
+           "frontend": fe_cfg["name"]}
     T_align = None
     if gt is not None:
         res["gt"] = _xy(gt[:, :3, 3])
@@ -202,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(url.query)
         if url.path == "/api/health":
             return self._send(200, {"ok": True, "busy": any(j["state"] == "running" for j in JOBS.values()),
-                                    "presets": kitti_presets()})
+                                    "presets": PRESETS})
         if url.path == "/api/browse":
             try:
                 return self._send(200, browse(q.get("path", [""])[0]))
@@ -279,9 +302,12 @@ def main():
     if a.clean:
         shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
         shutil.rmtree(DEMO_DIR, ignore_errors=True)
+    global PRESETS
+    PRESETS = presets()  # scanned once at start-up (counting scans in every folder)
     threading.Thread(target=worker, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
-    print(f"MSA demo server: http://localhost:{a.port}  (KITTI shortcuts: {len(kitti_presets())})")
+    groups = ", ".join("%s %d" % (g["group"], len(g["items"])) for g in PRESETS) or "none"
+    print(f"MSA demo server: http://localhost:{a.port}  (shortcuts: {groups})")
     srv.serve_forever()
 
 

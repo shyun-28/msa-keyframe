@@ -1,0 +1,14 @@
+# Shortcuts shown in Try It Yourself ("이 PC의 데이터"). Each group lists scan folders on
+# this PC; missing roots are skipped. `pattern` is a glob relative to `root`.
+# `frontend` overrides configs/kitti00.yaml's front-end for folders under `root`;
+# `note` is shown on the page when such a folder is selected.
+- group: KITTI
+  root: /HDD/KITTI/odometry/dataset/sequences
+  pattern: "*/velodyne"
+  label: "{0}"                 # {0} = first path component matched (sequence number)
+- group: DiTer
+  root: /HDD/DiTer               # tools/fetch_diter.py: SLAM keyframe scans + poses
+  pattern: "*"
+  label: "{0}"
+  frontend: {name: gicp}         # scans are ~1 m / 1-2 s apart: KISS-ICP drifts 8-33 m, GICP 0.2-9 m
+  note: "DiTer 배포본의 스캔은 저자들이 이미 고른 SLAM 키프레임(약 1 m 간격)이라, Front-end를 KISS-ICP 대신 스캔 간 GICP로 바꿔 씁니다."

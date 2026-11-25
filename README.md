@@ -5,7 +5,7 @@
 원 논문: N. Stathoulopoulos, C. Kanellakis, G. Nikolakopoulos, "A Minimal Subset Approach for Informed Keyframe Sampling in Large-Scale SLAM," IEEE RA-L, vol. 11, no. 1, pp. 738–745, 2026.
 
 - `index.html` — 프로젝트 페이지 (정적 HTML, 빌드 불필요)
-- `assets/` — 그림 및 데이터셋 예시 이미지 (KITTI, DiTer, SeePerSea)
+- `assets/` — 그림 및 데이터셋 예시 이미지 (KITTI, DiTer)
 - `msa_slam/`, `run.py`, `configs/` — Code Demo 파이프라인
 
 ## Code Demo: Front-end / MSA / Back-end
@@ -19,7 +19,7 @@ LiDAR scan ─▶ FRONT-END (교체 가능) ─▶ KEYFRAME SAMPLING (고정) �
 
 | 모듈 | 파일 | 구현 |
 |---|---|---|
-| Front-end | [msa_slam/frontend.py](msa_slam/frontend.py) | `Frontend` 인터페이스, `KissICPFrontend` |
+| Front-end | [msa_slam/frontend.py](msa_slam/frontend.py) | `Frontend` 인터페이스, `KissICPFrontend`, `GicpOdometryFrontend`(스캔 간 GICP, 듬성한 스캔용) |
 | Descriptor | [msa_slam/descriptors.py](msa_slam/descriptors.py) | OverlapTransformer (저자 공개 KITTI 가중치) |
 | Keyframe Sampling | [msa_slam/sampling.py](msa_slam/sampling.py) | 공식 [opt-key](https://github.com/LTU-RAI/opt-key) 코드 호출 (`RMIP_Online`, `FixedDistanceOnline`, `EntropyOnline`, `SpaciousnessOnline`), `all` = w/o MSA |
 | Back-end | [msa_slam/backend.py](msa_slam/backend.py) | `Backend` 인터페이스, `LoopClosureBackend` |
@@ -40,6 +40,12 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 ```
 
 데이터: KITTI odometry (`dataset/sequences/00/velodyne`, `dataset/poses/00.txt`). 경로는 [configs/kitti00.yaml](configs/kitti00.yaml)의 `dataset.root`.
+
+다른 데이터셋 (Try It Yourself 바로가기는 [configs/demo_datasets.yaml](configs/demo_datasets.yaml)):
+
+| 데이터셋 | 준비 | Front-end | 비고 |
+|---|---|---|---|
+| DiTer (야지, 4족 로봇) | `curl -L -o diter.torrent https://academictorrents.com/download/c604afddbe24fff0b873acbed370ff89df0c1614.torrent`<br>`python3 tools/fetch_diter.py /HDD/DiTer --torrent diter.torrent` | GICP | ROS bag(755 GB)은 받지 않고 시퀀스별 스캔 · 포즈만 받음(0.5 GB, 6개 시퀀스). 이 스캔은 저자들이 고른 SLAM 키프레임(약 1 m 간격)이라 KISS-ICP는 8~33 m 드리프트, 스캔 간 GICP는 0.2~9 m. CC BY-NC-SA 4.0 |
 
 ### 실행
 
@@ -77,11 +83,11 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 
 | Method | Keyframes | Memory raw (MB) | Sampling (s) | Back-end (s) | Loops | F1-max | ATE (m) | ATE impr. (%) |
 |---|---|---|---|---|---|---|---|---|
-| all (w/o MSA) | 4541 | 8827 | 0.0 | 34.2 | 824 | 0.952 | 0.89 | 74.6 |
-| **msa** | **962** | **1869** | 62.8 | **3.6** | 148 | 0.917 | 0.89 | 74.7 |
-| fixed_1 | 2717 | 5280 | 0.2 | 12.5 | 514 | 0.948 | 0.90 | 74.4 |
-| fixed_2 | 1541 | 2994 | 0.2 | 5.9 | 282 | 0.934 | 0.88 | 74.8 |
-| entropy | 1722 | 3342 | 77.5 | 8.0 | 309 | 0.920 | 0.88 | 74.8 |
-| spaciousness | 1183 | 2300 | 52.8 | 5.0 | 202 | 0.914 | 0.90 | 74.4 |
+| all (w/o MSA) | 4541 | 8827 | 0.0 | 36.2 | 824 | 0.952 | 0.89 | 74.6 |
+| **msa** | **962** | **1869** | 62.3 | **3.6** | 148 | 0.917 | 0.88 | 74.9 |
+| fixed_1 | 2717 | 5280 | 0.2 | 13.4 | 514 | 0.948 | 0.88 | 74.8 |
+| fixed_2 | 1541 | 2994 | 0.2 | 6.2 | 282 | 0.934 | 0.87 | 75.2 |
+| entropy | 1722 | 3342 | 127.4 | 9.7 | 309 | 0.920 | 0.87 | 75.0 |
+| spaciousness | 1183 | 2300 | 53.6 | 5.2 | 202 | 0.914 | 0.89 | 74.6 |
 
 1단계: KISS-ICP 55.9 s, OverlapTransformer 272.7 s(CPU). KISS-ICP만 쓴 ATE는 3.50 m. 채택된 루프는 모든 방법에서 GT와 3 m 이내.

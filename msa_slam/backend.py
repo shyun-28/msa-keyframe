@@ -7,7 +7,8 @@ LoopClosureBackend:
   7. Loop verification : candidates farther than `max_estimate_distance` from the
                          current estimate are skipped; the rest go through small_gicp
                          GICP, coarse-to-fine, accepted by inlier ratio.
-  8. PGO               : GTSAM iSAM2, odometry + robust (Cauchy) loop factors.
+  8. PGO               : GTSAM iSAM2, odometry + robust (Cauchy) loop factors. An odometry
+                         edge spanning k frames gets sigma * sqrt(k).
 """
 
 import time
@@ -57,7 +58,7 @@ class LoopClosureBackend(Backend):
         self.max_estimate_distance = max_estimate_distance
         self.num_threads = num_threads
 
-        self.odom_noise = _noise(*odom_sigmas)
+        self.odom_sigmas = odom_sigmas  # per frame-to-frame odometry step
         self.loop_noise = gtsam.noiseModel.Robust.Create(
             gtsam.noiseModel.mEstimator.Cauchy.Create(cauchy_k), _noise(*loop_sigmas))
         self.prior_noise = _noise(1e-6, 1e-6)
@@ -130,7 +131,13 @@ class LoopClosureBackend(Backend):
         else:
             rel = np.linalg.inv(self.odom[-1]) @ odom_pose
             cur_est = self.isam.calculateEstimatePose3(key - 1).matrix() @ rel
-            graph.add(gtsam.BetweenFactorPose3(key - 1, key, gtsam.Pose3(rel), self.odom_noise))
+            # The edge chains (frame_idx - previous keyframe) odometry steps; their errors
+            # add up, so the sigma grows with sqrt(steps). A constant sigma would make the
+            # long edges of sparse samplers (MSA, fixed intervals) far too stiff for loops
+            # to correct, penalising exactly the methods being compared.
+            steps = max(int(frame_idx) - self.frames[-1], 1)
+            noise = _noise(*(s * np.sqrt(steps) for s in self.odom_sigmas))
+            graph.add(gtsam.BetweenFactorPose3(key - 1, key, gtsam.Pose3(rel), noise))
         values.insert(key, gtsam.Pose3(cur_est))
 
         # 6. place recognition (against the database before this keyframe is added)

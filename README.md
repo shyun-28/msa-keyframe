@@ -59,6 +59,7 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 
 페이지의 Try It Yourself에서 서버에 있는 KITTI 00 샘플을 고르거나, 스캔 폴더(`.bin` KITTI 형식 또는 `.pcd`, 파일 이름 순)를 끌어다 놓고 실행합니다.
 `poses.txt`(KITTI 형식, 스캔당 한 줄)를 함께 넣으면 ATE · F1-max까지 계산하고, `calib.txt`에 `Tr:`가 있으면 KITTI처럼 카메라 → LiDAR 좌표로 바꿉니다.
+한 번에 1.7 GB(KITTI 약 900개)까지만 올립니다. 이보다 많이 고르면 앞부분만 올리는데, 이 PC의 Chrome에서 업로드한 데이터가 탭 메모리에 쌓여 약 2 GB에서 페이지가 멈췄기 때문입니다. 더 긴 시퀀스는 `run.py`로 돌리세요.
 업로드는 `results/uploads/`, 결과는 `results/demo/`에 저장됩니다(`--clean`으로 지움). 파일로 연 페이지(`file://`)에서는 실행 버튼이 꺼져 있습니다.
 
 결과: `results/<seq>_<n>/summary.md`(비교표), `trajectories.png`, 방법별 `metrics.json`, `poses_opt.txt`(KITTI 형식), `keyframes.txt`, `loops.json`.

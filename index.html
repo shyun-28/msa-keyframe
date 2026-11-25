@@ -215,13 +215,10 @@
   <div class="brand">MSA Keyframe<br><span class="muted small" style="font-weight:400">공간지능특론 프로젝트</span></div>
   <ol>
     <li><a href="#overview"><span>01</span>Overview</a></li>
-    <li><a href="#method"><span>02</span>Method</a></li>
-    <li><a href="#demo"><span>03</span>Code Demo</a></li>
-    <li><a href="#environments"><span>04</span>Environments</a></li>
-    <li><a href="#comparison"><span>05</span>Comparison</a></li>
-    <li><a href="#video"><span>06</span>Video</a></li>
-    <li><a href="#try"><span>07</span>Try It Yourself</a></li>
-    <li><a href="#code"><span>08</span>Code</a></li>
+    <li><a href="#demo"><span>02</span>Code Demo</a></li>
+    <li><a href="#try"><span>03</span>Try It Yourself</a></li>
+    <li><a href="#video"><span>04</span>Video</a></li>
+    <li><a href="#code"><span>05</span>Code</a></li>
   </ol>
 </nav>
 
@@ -269,65 +266,9 @@
   </div>
 </section>
 
-<!-- 02 METHOD -->
-<section id="method">
-  <div class="eyebrow">02 METHOD</div>
-  <h2>Front-end / Back-end Separation</h2>
-  <p>전체 파이프라인을 세 부분으로 나눕니다. <b>MSA는 고정</b>하고 앞뒤의 Front-end와 Back-end를 <b>바꿔 끼울 수 있게</b> 만들어,
-    MSA가 특정 오도메트리나 디스크립터에만 맞춰진 방법이 아닌지 확인합니다.</p>
-
-  <div class="pipeline" role="list">
-    <div class="stage" role="listitem">
-      <div class="tag">FRONT-END</div>
-      <h4>Odometry</h4>
-      <ol>
-        <li>1. LiDAR scan 입력</li>
-        <li>2. Odometry 추정<span class="mod">KISS-ICP [2]</span></li>
-      </ol>
-      <div class="swap"><span class="pill">Swappable</span></div>
-    </div>
-    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h11V5l7 7-7 7v-5H4z"/></svg></div>
-    <div class="stage mid" role="listitem">
-      <div class="tag">KEYFRAME SAMPLING</div>
-      <h4>MSA [1]</h4>
-      <ol>
-        <li>3. Sliding window 구성</li>
-        <li>4. Redundancy · Information 점수 계산</li>
-        <li>5. 최소 부분집합을 keyframe으로 선택</li>
-      </ol>
-      <div class="swap"><span class="pill fixed">Fixed</span></div>
-    </div>
-    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h11V5l7 7-7 7v-5H4z"/></svg></div>
-    <div class="stage" role="listitem">
-      <div class="tag">BACK-END</div>
-      <h4>Loop Closure &amp; PGO</h4>
-      <ol>
-        <li>6. Place Recognition<span class="mod">OverlapTransformer [3]</span></li>
-        <li>7. Loop Verification<span class="mod">small_gicp [4]</span></li>
-        <li>8. Pose Graph Optimization<span class="mod">iSAM2 [5]</span></li>
-      </ol>
-      <div class="swap"><span class="pill">Swappable</span></div>
-    </div>
-  </div>
-
-  <h3>w/o MSA vs. w/ MSA — 개념도</h3>
-  <div class="grid2 fig2">
-    <figure class="card">
-      <h4>w/o MSA — 모든 프레임 저장</h4>
-      <img src="assets/fig2_wo_msa.png" alt="MSA 미적용: 모든 키프레임과 많은 루프 클로저 후보" loading="lazy">
-    </figure>
-    <figure class="card">
-      <h4>w/ MSA — 최소 부분집합만 저장</h4>
-      <img src="assets/fig2_w_msa.png" alt="MSA 적용: 중복 키프레임 제거, 핵심 루프 클로저 유지" loading="lazy">
-    </figure>
-  </div>
-  <figcaption>논문 Fig. 2 [1]를 두 그림으로 나눠 다시 그린 개념도입니다. 키프레임 번호와 개수는 원리를 보여주기 위한 예시이며 실제 데이터와 관계없습니다.
-    MSA는 비슷한 위치의 중복 키프레임을 걸러내 불필요한 루프 클로저 후보를 줄이지만, 지도 보정에 필요한 핵심 연결은 유지합니다.</figcaption>
-</section>
-
-<!-- 03 CODE DEMO -->
+<!-- 02 CODE DEMO -->
 <section id="demo">
-  <div class="eyebrow">03 CODE DEMO</div>
+  <div class="eyebrow">02 CODE DEMO</div>
   <h2>Code Demo</h2>
   <div>
     <figure style="margin-bottom:26px">
@@ -342,121 +283,11 @@
       <div id="bars-body"><!-- bars rendered by script --></div>
     </div>
   </div>
-
-  <h3>재현 결과</h3>
-  <p>공식 MSA 코드 [1]를 그대로 가운데에 두고, 앞에 KISS-ICP [2], 뒤에 OverlapTransformer [3] · small_gicp [4] · iSAM2 [5]를 붙여 SLAM 전체에서 측정했습니다.
-    데이터셋이 다르므로(논문: Newer College, 재현: KITTI 00) 절대값보다 <b>All frames 대비 MSA의 변화 방향</b>을 비교합니다.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Metric</th><th>All frames (논문)</th><th>MSA (논문)</th><th>All frames (재현)</th><th>MSA (재현)</th></tr></thead>
-      <tbody>
-        <tr><td>Keyframes</td><td>–</td><td>–</td><td>4,541</td><td><b>962</b> (−79 %)</td></tr>
-        <tr><td>Memory ↓</td><td>65.8 GB</td><td>40.7 GB</td><td>8.83 GB</td><td><b>1.87 GB</b></td></tr>
-        <tr><td>Time ↓ (샘플링 + Back-end)</td><td>6,742 s</td><td>1,925 s</td><td>34.2 s</td><td>66.4 s</td></tr>
-        <tr><td>&nbsp;&nbsp;└ Back-end만</td><td>–</td><td>–</td><td>34.2 s</td><td><b>3.6 s</b></td></tr>
-        <tr><td>F1-max ↑</td><td>99.8 %</td><td>96.9 %</td><td>95.2 %</td><td>91.7 %</td></tr>
-        <tr><td>t. ATE 개선율 ↑</td><td>93.9 %</td><td>92.9 %</td><td>74.6 %</td><td>74.7 %</td></tr>
-        <tr><td>ATE (RMSE)</td><td>–</td><td>–</td><td>0.89 m</td><td>0.89 m</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <ul class="small muted findings">
-    <li><b>재현된 점</b>: 키프레임 79 %, 메모리 79 %, Back-end 시간 89 %가 줄었고, F1-max는 조금 내려가며 ATE는 그대로입니다. 논문과 같은 경향입니다.</li>
-    <li><b>재현되지 않은 점</b>: 전체 시간은 오히려 늘었습니다. 공식 MSA 구현이 순수 Python이라 윈도우마다 부분집합 512개를 계산하는 데 62.8 s가 들고,
-      저희 Back-end(OverlapTransformer + small_gicp)가 이미 빨라서 줄어든 Back-end 시간(30.6 s)보다 큽니다.</li>
-    <li>Memory는 키프레임 원본 스캔 크기 합, ATE 개선율은 KISS-ICP만 쓴 궤적(ATE 3.50 m) 대비입니다. 1단계(KISS-ICP 55.9 s, OverlapTransformer 272.7 s)는 공통이라 시간에서 뺐습니다.</li>
-  </ul>
-  <figure style="margin-top:18px">
-    <img src="assets/kitti00_traj.png" alt="KITTI 00 최적화 궤적: 왼쪽 w/o MSA 4,541 키프레임과 824 루프, 오른쪽 w/ MSA 962 키프레임과 148 루프, 아래는 재방문 교차로 확대" loading="lazy" style="border:1px solid var(--line); border-radius:8px">
-    <figcaption>최적화된 궤적(GT에 SE(3) 정렬). 아래는 재방문 교차로 확대: w/o MSA는 프레임마다 키프레임이 쌓이고 루프도 수십 개 연결되지만, MSA는 필요한 키프레임만 남겨도 같은 정확도로 지도를 보정합니다.</figcaption>
-  </figure>
 </section>
 
-<!-- 04 ENVIRONMENTS -->
-<section id="environments">
-  <div class="eyebrow">04 ENVIRONMENTS</div>
-  <h2>Multi-Environment Evaluation</h2>
-  <p>먼저 도심 환경의 KITTI로 논문 결과를 재현해 파이프라인이 제대로 동작하는지 확인합니다. 그다음 논문에서 다루지 않은 환경으로 넓혀,
-    구조물이 적은 야지나 특징이 거의 없는 수면에서도 MSA가 <b>튜닝 없이</b> 잘 동작하는지 확인합니다.</p>
-  <div class="grid3">
-    <article class="card env">
-      <div class="media" data-media><img class="cam" src="assets/kitti_cam.png" alt="KITTI 카메라 이미지 — 도심 도로" loading="lazy"><img class="bev" src="assets/kitti_bev.png" alt="KITTI LiDAR BEV" loading="lazy"></div>
-      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
-      <div class="kicker">URBAN · 도심</div>
-      <h4>KITTI [6]<span class="badge">재현</span></h4>
-      <ul><li>차량 · Velodyne HDL-64E</li><li>논문 결과 재현</li></ul>
-    </article>
-    <article class="card env">
-      <div class="media" data-media><img class="cam" src="assets/diter_cam.png" alt="DiTer 카메라 이미지 — 비포장 숲길" loading="lazy"><img class="bev" src="assets/diter_bev.png" alt="DiTer LiDAR BEV" loading="lazy"></div>
-      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
-      <div class="kicker">OFF-ROAD · 야지</div>
-      <h4>DiTer [7]<span class="badge new">확장</span></h4>
-      <ul><li>사족보행 로봇 · LiDAR</li><li>비정형 지형</li></ul>
-    </article>
-    <article class="card env">
-      <div class="media" data-media><img class="cam" src="assets/seepersea_cam.png" alt="SeePerSea 카메라 이미지 — 호수 위 카약" loading="lazy"><img class="bev" src="assets/seepersea_bev.png" alt="SeePerSea LiDAR BEV" loading="lazy"></div>
-      <div class="seg" role="group" aria-label="보기 전환"><button aria-pressed="true" data-v="cam">Camera</button><button aria-pressed="false" data-v="bev">LiDAR BEV</button></div>
-      <div class="kicker">MARITIME · 해양</div>
-      <h4>SeePerSea [8]<span class="badge new">확장</span></h4>
-      <ul><li>자율 수상선 · LiDAR + RGB</li><li>수면 환경</li></ul>
-    </article>
-  </div>
-</section>
-
-<!-- 05 COMPARISON -->
-<section id="comparison">
-  <div class="eyebrow">05 COMPARISON</div>
-  <h2>Related Keyframe Sampling Methods</h2>
-  <p>논문 Related Work에 나온 LiDAR 기반 방법 세 가지를 같은 Front-end · Back-end 조건에서 MSA와 비교합니다.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Method</th><th>방식</th><th>출처</th></tr></thead>
-      <tbody>
-        <tr><td>Fixed Interval</td><td>1 · 2 · 3 m마다 키프레임</td><td>LIO-SAM [9], DiSCo-SLAM [10], LAMP 2.0 [11]</td></tr>
-        <tr><td>Spaciousness-based</td><td>공간 넓이에 따라 간격 조절</td><td>Chen et al. [12], Kim et al. [13]</td></tr>
-        <tr><td>Entropy-based</td><td>정보량이 큰 프레임 선택</td><td>Zeng et al. [14]</td></tr>
-        <tr class="hl"><td><b>MSA</b></td><td>중복도 · 정보량 기반 최소 부분집합 선택</td><td>Stathoulopoulos et al. [1]</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <figure style="margin-top:22px">
-    <img src="assets/keyframe_distribution.png" alt="좁은 통로, 넓은 공간, 재방문 구간에서 각 방법의 키프레임 배치 개념도" loading="lazy" style="border:1px solid var(--line); border-radius:8px">
-    <figcaption>좁은 통로 · 넓은 공간 · 재방문 구간에서 각 방법이 키프레임을 어디에 두는지 나타낸 개념도입니다.</figcaption>
-  </figure>
-
-  <h3>KITTI 00 결과</h3>
-  <p>모든 방법이 같은 Front-end · Back-end · 파라미터를 씁니다. 비교 방법들도 공식 opt-key 구현을 그대로 호출했습니다.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Method</th><th>Keyframes</th><th>Memory</th><th>Back-end</th><th>샘플링</th><th>Loops</th><th>F1-max</th><th>ATE</th></tr></thead>
-      <tbody>
-        <tr><td>All frames (w/o MSA)</td><td>4,541</td><td>8.83 GB</td><td>34.2 s</td><td>0.0 s</td><td>824</td><td>0.952</td><td>0.89 m</td></tr>
-        <tr><td>Fixed Interval 1 m</td><td>2,717</td><td>5.28 GB</td><td>12.5 s</td><td>0.2 s</td><td>514</td><td>0.948</td><td>0.90 m</td></tr>
-        <tr><td>Fixed Interval 2 m</td><td>1,541</td><td>2.99 GB</td><td>5.9 s</td><td>0.2 s</td><td>282</td><td>0.934</td><td>0.88 m</td></tr>
-        <tr><td>Entropy-based</td><td>1,722</td><td>3.34 GB</td><td>8.0 s</td><td>77.5 s</td><td>309</td><td>0.920</td><td>0.88 m</td></tr>
-        <tr><td>Spaciousness-based</td><td>1,183</td><td>2.30 GB</td><td>5.0 s</td><td>52.8 s</td><td>202</td><td>0.914</td><td>0.90 m</td></tr>
-        <tr class="hl"><td><b>MSA</b></td><td><b>962</b></td><td><b>1.87 GB</b></td><td><b>3.6 s</b></td><td>62.8 s</td><td>148</td><td>0.917</td><td>0.89 m</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="small muted" style="margin-top:10px">MSA가 키프레임 · 메모리 · Back-end 시간이 가장 적습니다. 다만 KITTI 00은 구조물이 많은 도심이라 ATE는 방법 간 차이가 0.02 m 이내였고,
-    단순한 Fixed 2 m도 비슷한 정확도를 냈습니다. 차이가 드러날 환경(야지 · 해양)에서의 비교가 다음 단계입니다.</p>
-</section>
-
-<!-- 06 VIDEO -->
-<section id="video">
-  <div class="eyebrow">06 VIDEO</div>
-  <h2>Video</h2>
-  <p class="muted">공간지능특론 프로젝트 중간 발표</p>
-  <div class="yt">
-    <iframe src="https://www.youtube-nocookie.com/embed/yc6Atd3W2_o" title="공간지능 특론 프로젝트 중간 발표 - 정석환 윤승희" loading="lazy"
-      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-  </div>
-</section>
-
-<!-- 07 TRY IT -->
+<!-- 03 TRY IT -->
 <section id="try">
-  <div class="eyebrow">07 TRY IT YOURSELF</div>
+  <div class="eyebrow">03 TRY IT YOURSELF</div>
   <h2>Try It Yourself</h2>
   <p>LiDAR 스캔 시퀀스를 넣고 비교할 방법을 고르면, Code Demo와 같은 파이프라인(KISS-ICP → 키프레임 샘플링 → OverlapTransformer · small_gicp · iSAM2)이
     <b>All frames(w/o MSA)</b>와 고른 방법들을 같은 조건에서 돌리고 결과를 아래에 그립니다.</p>
@@ -475,7 +306,7 @@
   <div class="drop" id="drop">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5H7z"/><path d="M12 11v6m-2.5-3.5L12 11l2.5 2.5"/></svg>
     <div class="txt"><b>스캔 폴더나 파일을 여기에 끌어다 놓으세요</b>
-      <span>.bin(KITTI 형식) · .pcd, 파일 이름 순서가 시간 순서 · 정확도(ATE · F1)를 보려면 poses.txt(KITTI 형식, 선택)와 calib.txt(선택)도 함께</span></div>
+      <span>.bin(KITTI 형식) · .pcd, 파일 이름 순서가 시간 순서 · 정확도(ATE · F1)를 보려면 poses.txt(KITTI 형식, 선택)와 calib.txt(선택)도 함께 · 1.7 GB(KITTI 약 900개)가 넘으면 앞부분만 올립니다</span></div>
     <div class="drop-btns">
       <label class="btn-sq">폴더 선택<input type="file" id="dir" webkitdirectory hidden></label>
       <label class="btn-sq ghost">파일 선택<input type="file" id="file" multiple accept=".bin,.pcd,.txt" hidden></label>
@@ -503,9 +334,20 @@
   </div>
 </section>
 
-<!-- 08 CODE -->
+<!-- 04 VIDEO -->
+<section id="video">
+  <div class="eyebrow">04 VIDEO</div>
+  <h2>Video</h2>
+  <p class="muted">공간지능특론 프로젝트 중간 발표</p>
+  <div class="yt">
+    <iframe src="https://www.youtube-nocookie.com/embed/yc6Atd3W2_o" title="공간지능 특론 프로젝트 중간 발표 - 정석환 윤승희" loading="lazy"
+      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  </div>
+</section>
+
+<!-- 05 CODE -->
 <section id="code">
-  <div class="eyebrow">08 CODE</div>
+  <div class="eyebrow">05 CODE</div>
   <h2>Code &amp; Citation</h2>
   <p>코드: <a href="https://github.com/shyun-28/msa-keyframe" target="_blank" rel="noopener">github.com/shyun-28/msa-keyframe</a>
     (공식 MSA 구현 <a href="https://github.com/LTU-RAI/opt-key" target="_blank" rel="noopener">LTU-RAI/opt-key</a>를 submodule로 사용)</p>
@@ -638,11 +480,20 @@ document.querySelectorAll(".env").forEach(card=>{
     .finally(refresh);
 
   // file collection (input, folder input, drag & drop with folders)
+  // Browsers on this PC stalled after ~1.8 GB of uploads, so only the first
+  // UPLOAD_LIMIT_MB of scans (in time order) are sent; poses.txt may stay longer.
+  const UPLOAD_LIMIT_MB = 1700;
   const setFiles = list => {
-    files = list.filter(f=>isScan(f.name) || isAux(f.name)).sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
-    const scans = files.filter(f=>isScan(f.name)), mb = files.reduce((s,f)=>s+f.size,0)/1048576;
-    const aux = files.filter(f=>isAux(f.name)).map(f=>f.name);
-    $("files").textContent = scans.length ? `스캔 ${scans.length.toLocaleString()}개 · ${mb.toFixed(1)} MB` + (aux.length ? ` · ${aux.join(", ")} 포함` : " · poses.txt 없음 (정확도 지표 생략)")
+    const byName = (a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true});
+    const allScans = list.filter(f=>isScan(f.name)).sort(byName), auxFiles = list.filter(f=>isAux(f.name));
+    const scans = [];
+    let bytes = 0;
+    for (const f of allScans) { if (scans.length && bytes + f.size > UPLOAD_LIMIT_MB*1048576) break; scans.push(f); bytes += f.size; }
+    files = [...scans, ...auxFiles];
+    const mb = bytes/1048576, aux = auxFiles.map(f=>f.name);
+    const cut = scans.length < allScans.length
+      ? ` (전체 ${allScans.length.toLocaleString()}개 중 앞부분 · 한 번에 ${(UPLOAD_LIMIT_MB/1000).toFixed(1)} GB까지만 올립니다)` : "";
+    $("files").textContent = scans.length ? `스캔 ${scans.length.toLocaleString()}개 · ${mb.toFixed(1)} MB${cut}` + (aux.length ? ` · ${aux.join(", ")} 포함` : " · poses.txt 없음 (정확도 지표 생략)")
       : (list.length ? "지원하는 스캔(.bin, .pcd)이 없습니다." : "");
     if (scans.length) { document.querySelector("input[name=src][value=upload]").checked = true; }
     refresh();
@@ -672,16 +523,34 @@ document.querySelectorAll(".env").forEach(card=>{
 
   const upload = async () => {
     const session = [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");
-    let done = 0, i = 0;
-    const one = async () => {
-      while (i < files.length) {
-        const f = files[i++];
-        const r = await fetch(`/api/upload?session=${session}&name=${encodeURIComponent(f.name)}`, {method:"POST", body:f});
-        if (!r.ok) throw new Error((await r.json()).error || r.statusText);
-        prog(0, `업로드 ${++done}/${files.length}`);
+    // Send bytes, not the File itself: posting thousands of File objects made Chrome
+    // stall at ~2 GB in total. Each file is retried and timed out on its own.
+    const send = async f => {
+      for (let attempt = 1; ; attempt++) {
+        const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 30000);
+        try {
+          const body = new Uint8Array(await f.arrayBuffer());
+          const r = await fetch(`/api/upload?session=${session}&name=${encodeURIComponent(f.name)}`,
+                                {method:"POST", body, signal:ctrl.signal});
+          if (r.status === 400) throw Object.assign(new Error((await r.json()).error), {fatal:true});
+          if (!r.ok) throw new Error(r.statusText);
+          return;
+        } catch (e) {
+          if (e.fatal || attempt >= 3) throw new Error(`${f.name}: ${e.name === "AbortError" ? "30초 동안 응답 없음" : e.message}`);
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        } finally { clearTimeout(timer); }
       }
     };
-    await Promise.all([one(), one(), one(), one()]);
+    let done = 0, i = 0, failed = null;
+    const one = async () => {
+      while (i < files.length && !failed) {
+        const f = files[i++];
+        try { await send(f); } catch (e) { failed = failed || e; return; }
+        prog(++done / files.length * 0.05, `업로드 ${done}/${files.length}`);
+      }
+    };
+    await Promise.all([one(), one()]);
+    if (failed) throw failed;
     return session;
   };
 

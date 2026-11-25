@@ -1,0 +1,11 @@
+# KITTI 00 with Scan Context instead of OverlapTransformer (the paper's second descriptor).
+# Everything else is configs/kitti00.yaml.
+base: kitti00.yaml
+descriptor:
+  name: scan_context     # official opt-key SC_Handler parameters (pr_example.py)
+  downcell_size: 0.5
+  lidar_height: 2.0
+  sector_res: 60
+  ring_res: 20
+  max_length: 80.0
+  loop_threshold: 0.8    # cosine similarity; the paper uses 0.8 for loop candidates

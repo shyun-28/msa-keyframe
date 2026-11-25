@@ -45,11 +45,14 @@ class LoopClosureBackend(Backend):
                  coarse_max_corr: float = 3.0, fine_max_corr: float = 1.0,
                  min_inlier_ratio: float = 0.5, max_estimate_distance: float = 30.0,
                  num_threads: int = 8,
-                 odom_sigmas=(0.01, 0.1), loop_sigmas=(0.05, 0.3), cauchy_k: float = 1.0):
+                 odom_sigmas=(0.01, 0.1), loop_sigmas=(0.05, 0.3), cauchy_k: float = 1.0,
+                 similarity=None):
         import gtsam
 
         self.gtsam = gtsam
         self.sim_threshold = sim_threshold
+        # descriptor similarity (query, db rows) -> scores; default: 1/(1+L2)
+        self.similarity = similarity or (lambda q, db: 1.0 / (1.0 + np.linalg.norm(db - q, axis=1)))
         self.top_k = top_k
         self.min_frame_gap = min_frame_gap
         self.coarse_voxel, self.fine_voxel = coarse_voxel, fine_voxel
@@ -83,7 +86,7 @@ class LoopClosureBackend(Backend):
         n = int(np.searchsorted(self.frames, frame_idx - self.min_frame_gap, side="right"))
         if n == 0:
             return []
-        sims = 1.0 / (1.0 + np.linalg.norm(self.descs[:n] - descriptor, axis=1))
+        sims = self.similarity(descriptor, self.descs[:n])
         k = min(k, n)
         top = np.argpartition(-sims, k - 1)[:k]
         top = top[np.argsort(-sims[top])]
@@ -192,9 +195,10 @@ class LoopClosureBackend(Backend):
                 "clouds": int(sum(c.nbytes for c in self.clouds))}
 
 
-def make_backend(cfg: dict, capacity: int, descriptor_dim: int) -> Backend:
+def make_backend(cfg: dict, capacity: int, descriptor_dim: int, similarity=None) -> Backend:
     cfg = dict(cfg)
     name = cfg.pop("name").lower()
     if name == "loop_closure_isam2":
-        return LoopClosureBackend(capacity=capacity, descriptor_dim=descriptor_dim, **cfg)
+        return LoopClosureBackend(capacity=capacity, descriptor_dim=descriptor_dim,
+                                  similarity=similarity, **cfg)
     raise ValueError(f"Unknown back-end: {name}")

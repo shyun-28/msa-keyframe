@@ -20,7 +20,7 @@ LiDAR scan ─▶ FRONT-END (교체 가능) ─▶ KEYFRAME SAMPLING (고정) �
 | 모듈 | 파일 | 구현 |
 |---|---|---|
 | Front-end | [msa_slam/frontend.py](msa_slam/frontend.py) | `Frontend` 인터페이스, `KissICPFrontend`, `GicpOdometryFrontend`(스캔 간 GICP, 듬성한 스캔용) |
-| Descriptor | [msa_slam/descriptors.py](msa_slam/descriptors.py) | OverlapTransformer (저자 공개 KITTI 가중치) |
+| Descriptor | [msa_slam/descriptors.py](msa_slam/descriptors.py) | OverlapTransformer (저자 공개 KITTI 가중치), Scan Context (공식 opt-key `SC_Handler`와 같은 설정 · 같은 출력, 벡터화) |
 | Keyframe Sampling | [msa_slam/sampling.py](msa_slam/sampling.py) | 공식 [opt-key](https://github.com/LTU-RAI/opt-key) 코드 호출 (`RMIP_Online`, `FixedDistanceOnline`, `EntropyOnline`, `SpaciousnessOnline`), `all` = w/o MSA |
 | Back-end | [msa_slam/backend.py](msa_slam/backend.py) | `Backend` 인터페이스, `LoopClosureBackend` |
 | 평가 | [msa_slam/metrics.py](msa_slam/metrics.py) | ATE, PR/F1-max (공식 평가식), 루프 정확도 |
@@ -91,3 +91,18 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 | spaciousness | 1183 | 2300 | 53.6 | 5.2 | 202 | 0.914 | 0.89 | 74.6 |
 
 1단계: KISS-ICP 55.9 s, OverlapTransformer 272.7 s(CPU). KISS-ICP만 쓴 ATE는 3.50 m. 채택된 루프는 모든 방법에서 GT와 3 m 이내.
+
+### 결과: KITTI 00, Scan Context (`configs/kitti00_sc.yaml`)
+
+논문은 OverlapTransformer와 Scan Context 두 디스크립터로 MSA를 평가합니다. Scan Context는 20×60(고리 × 부채꼴) 행렬이고, 유사도는 부채꼴 60칸을 돌려 가며 잰 코사인 유사도의 최댓값, 루프 후보 기준은 논문의 0.8입니다.
+
+| Method | Keyframes | Memory raw (MB) | Sampling (s) | Back-end (s) | Loops | F1-max | ATE (m) | ATE impr. (%) |
+|---|---|---|---|---|---|---|---|---|
+| all (w/o MSA) | 4541 | 8827 | 0.0 | 236.7 | 731 | 0.967 | 0.89 | 74.5 |
+| **msa** | **999** | **1942** | 90.1 | **8.0** | 116 | 0.937 | 0.89 | 74.6 |
+| fixed_1 | 2717 | 5280 | 0.6 | 69.6 | 466 | 0.959 | 0.89 | 74.6 |
+| fixed_2 | 1541 | 2994 | 0.4 | 18.2 | 249 | 0.957 | 0.89 | 74.7 |
+| entropy | 1722 | 3342 | 79.3 | 23.9 | 250 | 0.925 | 0.89 | 74.6 |
+| spaciousness | 1183 | 2300 | 52.9 | 12.2 | 160 | 0.936 | 0.90 | 74.3 |
+
+Scan Context는 비교할 때 방향을 60번 돌려 보므로 Back-end가 OverlapTransformer보다 느리고(all: 36 s → 237 s), 그만큼 키프레임을 줄인 MSA의 Back-end 절감(237 s → 8 s)이 커집니다.

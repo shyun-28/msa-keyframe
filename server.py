@@ -119,14 +119,17 @@ FE_LABEL = {"kiss_icp": "KISS-ICP", "gicp": "GICP"}
 PRESETS = []
 JOBS = {}
 QUEUE = queue.Queue()
-_descriptor = None
+# descriptors the page can choose; the paper evaluates MSA with both (Sec. V)
+DESC_CFGS = {"overlap_transformer": CFG["descriptor"],
+             "scan_context": yaml.safe_load(open(os.path.join(ROOT, "configs", "kitti00_sc.yaml")))["descriptor"]}
+DESC_LABEL = {"overlap_transformer": "OverlapTransformer", "scan_context": "Scan Context"}
+_descriptors = {}
 
 
-def descriptor():
-    global _descriptor
-    if _descriptor is None:
-        _descriptor = make_descriptor(CFG["descriptor"])
-    return _descriptor
+def descriptor(name):
+    if name not in _descriptors:
+        _descriptors[name] = make_descriptor(DESC_CFGS[name])
+    return _descriptors[name]
 
 
 def _xy(a):
@@ -135,14 +138,17 @@ def _xy(a):
 
 def run_job(job):
     job.update(state="running", stage="데이터 확인", progress=0.0)
+    dname = job["descriptor"]
+    cfg = {**CFG, "descriptor": DESC_CFGS[dname]}
     if job["source"] == "local":
         pose, calib = find_sidecars(job["folder"])
         ds = FolderScans(job["folder"], pose_file=pose, calib_file=calib)
         fe_cfg = frontend_cfg(job["folder"])
-        extra = [local_cache_path(job["folder"], len(ds), fe_cfg)]  # stage 1 kept per folder for re-runs
+        extra = [local_cache_path(job["folder"], len(ds), f"{fe_cfg}|{dname}")]  # stage 1 kept per folder
         k00 = os.path.realpath(os.path.join(CFG["dataset"]["root"], "sequences", "00", "velodyne"))
         if job["folder"] == k00:  # stage 1 already computed by run.py for KITTI 00
-            extra.append(KITTI00_CACHE)
+            extra.append(KITTI00_CACHE if dname == "overlap_transformer" else KITTI00_CACHE.replace(
+                "kitti_00_4541", f"kitti_00_4541_{dname}"))
     else:
         ds = FolderScans(job["folder"], name="upload")
         fe_cfg = CFG["frontend"]
@@ -161,18 +167,18 @@ def run_job(job):
     cache = extra[0] if job["source"] == "local" else os.path.join(out, "stage1_cache.npz")
     have_cache = any(os.path.exists(p) and len(np.load(p, mmap_mode="r")["odom"]) >= n for p in [cache] + extra)
     fe = None if have_cache else make_frontend(fe_cfg)
-    desc = None if have_cache else descriptor()
+    desc = None if have_cache else descriptor(dname)
     stage1 = run_frontend(ds, fe, desc, n, CFG["backend"].get("fine_voxel", 0.5), cache,
-                          progress=prog(0, f"1단계 · {FE_LABEL.get(fe_cfg['name'], fe_cfg['name'])} + OverlapTransformer"), extra_caches=extra)
+                          progress=prog(0, f"1단계 · {FE_LABEL.get(fe_cfg['name'], fe_cfg['name'])} + {DESC_LABEL[dname]}"), extra_caches=extra)
 
     gt = ds.gt_poses[:n] if ds.gt_poses is not None else None
     res = {"frames": n, "total_frames": len(ds), "has_gt": gt is not None, "methods": [],
-           "frontend": fe_cfg["name"]}
+           "frontend": fe_cfg["name"], "descriptor": dname}
     T_align = None
     if gt is not None:
         res["gt"] = _xy(gt[:, :3, 3])
     for k, m in enumerate(methods):
-        r = run_method(m, ds, stage1, n, CFG, os.path.join(out, m), progress=prog(1 + k, f"2단계 · {m}"))
+        r = run_method(m, ds, stage1, n, cfg, os.path.join(out, m), progress=prog(1 + k, f"2단계 · {m}"))
         traj = r["_traj"][:, :3, 3]
         if gt is not None:
             T_align = umeyama_se3(traj, gt[:, :3, 3])
@@ -272,7 +278,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "bad json"})
             methods = ["all"] + [m for m in req.get("methods", []) if m in ALLOWED_METHODS and m != "all"]
             job = {"id": uuid.uuid4().hex, "state": "queued", "stage": "대기 중", "progress": 0.0,
-                   "methods": methods, "max_frames": int(req.get("max_frames") or 0), "created": time.time()}
+                   "methods": methods, "max_frames": int(req.get("max_frames") or 0), "created": time.time(),
+                   "descriptor": req.get("descriptor") if req.get("descriptor") in DESC_CFGS else "overlap_transformer"}
             if req.get("path"):
                 folder = os.path.realpath(str(req["path"]))
                 if not os.path.isdir(folder):

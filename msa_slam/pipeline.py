@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 from .backend import make_backend
 from .metrics import ate_rmse, complete_trajectory, loop_correctness, pr_metrics
+from .descriptors import descriptor_ops
 from .sampling import make_sampler
 
 
@@ -87,7 +88,12 @@ def run_method(method: str, dataset, stage1: Dict, n_frames: int, cfg: dict, out
     sampler = make_sampler(method, cfg.get("sampling", {}))
     odom, descs = stage1["odom"], stage1["descs"]
     clouds, offsets = stage1["clouds"], stage1["offsets"]
-    backend = make_backend(cfg["backend"], capacity=n_frames, descriptor_dim=descs.shape[1])
+    ops = descriptor_ops(cfg["descriptor"])
+    backend_cfg = dict(cfg["backend"])
+    if "loop_threshold" in cfg["descriptor"]:  # similarity scales differ per descriptor
+        backend_cfg["sim_threshold"] = cfg["descriptor"]["loop_threshold"]
+    backend = make_backend(backend_cfg, capacity=n_frames, descriptor_dim=descs.shape[1],
+                           similarity=ops.similarity)
     gt = dataset.gt_poses[:n_frames] if dataset.gt_poses is not None else None
     delta = cfg.get("eval", {}).get("delta", 3.0)
 
@@ -97,7 +103,7 @@ def run_method(method: str, dataset, stage1: Dict, n_frames: int, cfg: dict, out
     for i in tqdm(range(n_frames), desc=f"[stage 2] {method}"):
         points = next(scans) if scans is not None else None
         t0 = time.perf_counter()
-        new = sampler.step(i, odom[i], descs[i], points)
+        new = sampler.step(i, odom[i], ops.for_sampler(descs[i]), points)
         t1 = time.perf_counter()
         for k in new:
             backend.add_keyframe(k, odom[k], descs[k], clouds[offsets[k]:offsets[k + 1]])

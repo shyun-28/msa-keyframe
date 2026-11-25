@@ -76,10 +76,15 @@ def main():
     args = ap.parse_args()
 
     cfg = yaml.safe_load(open(args.config))
+    if "base" in cfg:  # e.g. kitti00_sc.yaml = kitti00.yaml with another descriptor
+        base = yaml.safe_load(open(os.path.join(os.path.dirname(args.config), cfg.pop("base"))))
+        cfg = {**base, **cfg}
     methods = args.methods or cfg["sampling"]["methods"]
     dataset = make_dataset(cfg["dataset"])
     n = min(len(dataset), args.max_frames or len(dataset))
-    out_root = os.path.join(cfg.get("output", "results"), f"{dataset.name}_{n}")
+    desc_name = cfg["descriptor"]["name"]
+    suffix = "" if desc_name == "overlap_transformer" else f"_{desc_name}"  # OT keeps the original paths
+    out_root = os.path.join(cfg.get("output", "results"), f"{dataset.name}_{n}{suffix}")
 
     cache = os.path.join(out_root, "stage1_cache.npz")
     if os.path.exists(cache):

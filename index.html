@@ -174,9 +174,11 @@
   .local-info select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
   .src-opt{display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:var(--radius); padding:12px 14px; cursor:pointer; flex-wrap:wrap}
   .src-opt:has(input:checked){border-color:var(--navy); background:#f6f9fc}
-  .src-opt span{flex:1; min-width:160px}
+  .src-opt > span{flex:1; min-width:160px}
   .src-opt b{display:block; color:var(--navy); font-size:15px}
   .src-opt small{color:var(--ink-2); font-size:12.5px}
+  .src-opt.soon{cursor:not-allowed; opacity:.55; background:var(--bg-2)}
+  .src-opt .tag{display:inline-block; margin-left:6px; font-size:11.5px; font-weight:500; color:var(--orange); border:1px solid var(--orange); border-radius:999px; padding:0 8px; vertical-align:2px}
   .src-opt select{font:inherit; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid var(--line)}
   .drop[hidden]{display:none}
   .drop-btns{display:flex; gap:8px; flex-wrap:wrap}
@@ -290,7 +292,7 @@
     <div class="card pillar">
       <div class="num">03</div>
       <h4>Comparison</h4>
-      <p>Related Work의 키프레임 샘플링 방법(Fixed Interval, Spaciousness, Entropy)과 같은 조건에서 비교합니다.</p>
+      <p>가장 흔히 쓰는 고정 간격(Fixed Interval) 키프레임 방식과 같은 조건에서 비교합니다.</p>
     </div>
   </div>
 </section>
@@ -307,7 +309,7 @@
     <div class="stage msa"><h4>② MSA 키프레임 샘플링</h4><ul>
       <li>슬라이딩 윈도우에서 디스크립터의 중복도·정보량으로 최소 부분집합 선택</li>
       <li>저자 공식 코드(opt-key) 사용</li>
-      <li>비교군: 고정 간격 1/2/3 m, Entropy, Spaciousness</li></ul></div>
+      <li>비교군: 고정 간격 2 m</li></ul></div>
     <div class="arrow">→</div>
     <div class="stage"><h4>③ Back-end</h4><ul>
       <li>장소 인식: 키프레임 디스크립터 top-3 검색</li>
@@ -342,8 +344,8 @@
     <label class="src-opt"><input type="radio" name="src" value="local" checked>
       <span><b>이 PC의 데이터</b><small>KITTI · DiTer 바로가기 또는 스캔 폴더 · 업로드 없이 서버가 바로 읽음 · 크기 제한 없음</small></span>
     </label>
-    <label class="src-opt"><input type="radio" name="src" value="upload">
-      <span><b>파일 업로드</b><small>브라우저로 파일을 보냄 · 1.7 GB까지</small></span>
+    <label class="src-opt soon" title="다른 PC에서 접속해 실행하는 기능은 준비 중입니다"><input type="radio" name="src" value="upload" disabled>
+      <span><b>파일 업로드 <span class="tag">준비 중</span></b><small>다른 PC에서 접속해 자기 LiDAR 데이터로 실행하는 기능 · 지원 예정</small></span>
     </label>
   </div>
 
@@ -379,8 +381,6 @@
     <span class="chip fixed" title="항상 포함되는 기준선">All frames</span>
     <button class="chip" data-m="msa" aria-pressed="true">MSA</button>
     <button class="chip" data-m="fixed_2" aria-pressed="true">Fixed Interval 2 m</button>
-    <button class="chip" data-m="entropy" aria-pressed="false">Entropy</button>
-    <button class="chip" data-m="spaciousness" aria-pressed="false">Spaciousness</button>
   </div>
   <div class="run-row">
     <button class="btn-run" id="run" disabled>실행</button>
@@ -515,13 +515,13 @@ document.querySelectorAll(".env").forEach(card=>{
   const esc = s => String(s).replace(/[<>&"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
   const drop = $("drop"), status = $("status"), srv = $("srv"), runBtn = $("run");
   const chips = [...document.querySelectorAll(".chip[data-m]")];
-  const LABEL = {all:"All frames", msa:"MSA", fixed_2:"Fixed 2 m", entropy:"Entropy", spaciousness:"Spaciousness"};
+  const LABEL = {all:"All frames", msa:"MSA", fixed_2:"Fixed 2 m"};
   const FE = {kiss_icp:"KISS-ICP", gicp:"GICP (스캔 간)"};
   const DESC = {overlap_transformer:"OverlapTransformer", scan_context:"Scan Context"};
   const descChips = [...document.querySelectorAll(".chip[data-d]")];
   descChips.forEach(c=>c.addEventListener("click", ()=>descChips.forEach(x=>x.setAttribute("aria-pressed", x === c))));
   const descriptor = () => descChips.find(c=>c.getAttribute("aria-pressed")==="true").dataset.d;
-  const COLOR = {all:"#6b7a90", msa:"#1b3557", fixed_2:"#2b5a8a", entropy:"#7a5a9e", spaciousness:"#3f7f6a"};
+  const COLOR = {all:"#6b7a90", msa:"#1b3557", fixed_2:"#2b5a8a"};
   const isScan = n => /\.(bin|pcd)$/i.test(n), isAux = n => /^(poses|calib)\.txt$/i.test(n);
   let online = false, busy = false, files = [];
 
@@ -580,7 +580,7 @@ document.querySelectorAll(".env").forEach(card=>{
           : `<select aria-label="${esc(g.group)}"><option value="">${g.items.length}개 중 선택…</option>` +
             g.items.map(p=>`<option value="${esc(p.path)}">${esc(p.name)}</option>`).join("") + "</select>") + "</div>").join("");
       $("presets").querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>browse(b.dataset.path)));
-      $("presets").querySelectorAll("select").forEach(sel=>sel.addEventListener("change", ()=>sel.value && browse(sel.value))); srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에서 계산합니다. 업로드한 파일은 이 PC의 <code>results/uploads</code>에만 저장됩니다."; })
+      $("presets").querySelectorAll("select").forEach(sel=>sel.addEventListener("change", ()=>sel.value && browse(sel.value))); srv.className = "srv ok"; srv.innerHTML = "데모 서버 연결됨 · 이 PC에 있는 데이터로 이 PC에서 계산합니다."; })
     .catch(() => { srv.className = "srv off";
       srv.innerHTML = "이 페이지에서는 계산 서버가 없어 실행되지 않습니다. 직접 돌려 보려면 <a href=\"https://github.com/shyun-28/msa-keyframe\">저장소</a>를 받아 README대로 설치한 뒤 <code>python server.py</code>를 실행하고 <code>http://localhost:8000/#try</code>를 여세요."; runBtn.disabled = true; })
     .finally(refresh);

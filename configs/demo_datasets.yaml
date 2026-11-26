@@ -12,3 +12,8 @@
   label: "{0}"
   frontend: {name: gicp}         # scans are ~1 m / 1-2 s apart: KISS-ICP drifts 8-33 m, GICP 0.2-9 m
   note: "DiTer 배포본의 스캔은 저자들이 이미 고른 SLAM 키프레임(약 1 m 간격)이라, Front-end를 KISS-ICP 대신 스캔 간 GICP로 바꿔 씁니다."
+- group: SeePerSea
+  root: /HDD/SeePerSea/msa_ready # tools/prepare_seepersea.py: scans + GPS poses
+  pattern: "*"
+  label: "{0}"
+  note: "한계 사례: 수면에서는 스캔당 점이 40~60개뿐이라 오도메트리와 장소 인식이 동작하지 않습니다. 정답 궤적은 GPS(방향 없음)입니다."

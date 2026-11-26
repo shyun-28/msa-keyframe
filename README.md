@@ -46,6 +46,7 @@ mkdir -p weights && curl -L -o weights/pretrained_overlap_transformer.pth.tar \
 | 데이터셋 | 준비 | Front-end | 비고 |
 |---|---|---|---|
 | DiTer (야지, 4족 로봇) | `curl -L -o diter.torrent https://academictorrents.com/download/c604afddbe24fff0b873acbed370ff89df0c1614.torrent`<br>`python3 tools/fetch_diter.py /HDD/DiTer --torrent diter.torrent` | GICP | ROS bag(755 GB)은 받지 않고 시퀀스별 스캔 · 포즈만 받음(0.5 GB, 6개 시퀀스). 이 스캔은 저자들이 고른 SLAM 키프레임(약 1 m 간격)이라 KISS-ICP는 8~33 m 드리프트, 스캔 간 GICP는 0.2~9 m. CC BY-NC-SA 4.0 |
+| SeePerSea (수면) | `python3 tools/prepare_seepersea.py <SeePerSea>/target_folder/separate /HDD/SeePerSea/msa_ready` | KISS-ICP | 정답 궤적은 GPS를 보간해 만듦(방향 없음 → R. ATE 의미 없음). 스캔당 점이 40~60개라 오도메트리 · 장소 인식이 동작하지 않는 한계 사례 |
 
 ### 실행
 
